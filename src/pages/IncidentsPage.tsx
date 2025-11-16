@@ -31,19 +31,23 @@ export default function IncidentsPage() {
         incidentFilters.assignedTo = user.userId;
       }
       
-      console.log('Filtros enviados:', incidentFilters); // Para debug
+      // Cargar incidentes
       const incidentData = await incidentService.getIncidents(incidentFilters);
-      console.log('Datos recibidos:', incidentData); // Para debug
       setIncidents(incidentData);
 
+      // Cargar trabajadores solo si es admin (sin bloquear la carga de incidentes)
       if (user?.role === 'admin') {
-        const workerData = await workerService.getWorkers({ sortBy: 'workload', order: 'asc' });
-        setWorkers(workerData);
+        try {
+          const workerData = await workerService.getWorkers({ sortBy: 'workload', order: 'asc' });
+          setWorkers(workerData);
+        } catch (workerErr) {
+          console.error('Error al cargar trabajadores:', workerErr);
+          // No mostrar error al usuario, solo log
+        }
       }
-    } catch (err: any) {
-      console.error('Error completo:', err); // Ver el error completo
-      console.error('Respuesta del servidor:', err.response?.data); // Ver respuesta del backend
-      addNotification('error', err.response?.data?.message || 'Error al cargar datos');
+    } catch (err) {
+      console.error('Error al cargar datos:', err);
+      addNotification('error', 'Error al cargar datos');
     } finally {
       setLoading(false);
     }
