@@ -6,7 +6,7 @@ import { incidentService } from '../services/incidentService';
 import { workerService } from '../services/workerService';
 import { useNotification } from '../hooks/useNotification';
 import { Incident, CreateIncidentData } from '../types/incident.types';
-import { Worker } from '../types/worker.types';
+import { Worker, WorkersResponse } from '../types/worker.types';
 import { CATEGORIES, PRIORITIES, STATUSES, ROLES } from '../utils/constants';
 
 export default function IncidentsPage() {
@@ -25,72 +25,70 @@ export default function IncidentsPage() {
     fetchData();
   }, [filters]);
 
-  // SOLO REEMPLAZA el useEffect que maneja lastMessage con este:
+  // Escuchar cambios en lastMessage del WebSocket
+  useEffect(() => {
+    if (!lastMessage) return;
 
-useEffect(() => {
-  if (!lastMessage) return;
+    console.log('🔔 Procesando mensaje WebSocket:', lastMessage);
+    
+    const eventType = lastMessage.type;
+    const payload = lastMessage.data;
 
-  console.log('🔔 Procesando mensaje WebSocket:', lastMessage);
-  
-  const eventType = lastMessage.type;
-  const payload = lastMessage.data;
+    switch (eventType) {
+      case 'NEW_INCIDENT':
+        console.log('✨ Nuevo incidente detectado:', payload);
+        setIncidents((prev) => [payload, ...prev]);
+        break;
 
-  switch (eventType) {
-    case 'NEW_INCIDENT':
-      console.log('✨ Nuevo incidente detectado:', payload);
-      // Ya no agregamos notificación aquí (se hace en WebSocketContext)
-      setIncidents((prev) => [payload, ...prev]);
-      break;
-
-    case 'UPDATE_INCIDENT':
-      console.log('🔄 Actualización de incidente:', payload);
-      setIncidents((prev) =>
-        prev.map((inc) =>
-          inc.incidentId === payload.incidentId ? payload : inc
-        )
-      );
-      if (selectedIncident?.incidentId === payload.incidentId) {
-        setSelectedIncident(payload);
-      }
-      break;
-
-    case 'ASSIGN_INCIDENT':
-      console.log('👷 Asignación de incidente:', payload);
-      setIncidents((prev) =>
-        prev.map((inc) =>
-          inc.incidentId === payload.incidentId ? payload : inc
-        )
-      );
-      if (selectedIncident?.incidentId === payload.incidentId) {
-        setSelectedIncident(payload);
-      }
-      if (user?.role === 'admin') {
-        fetchWorkers();
-      }
-      break;
-
-    case 'DELETE_INCIDENT':
-      console.log('🗑️ Eliminación de incidente');
-      const deletedId = payload.incidentId || lastMessage.incidentId;
-      setIncidents((prev) => prev.filter((inc) => inc.incidentId !== deletedId));
-      if (selectedIncident?.incidentId === deletedId) {
-        setSelectedIncident(null);
-      }
-      break;
-
-    case 'UPDATE_WORKER':
-      if (user?.role === 'admin') {
-        console.log('👤 Actualización de trabajador');
-        setWorkers((prev) =>
-          prev.map((w) => (w.userId === payload.userId ? payload : w))
+      case 'UPDATE_INCIDENT':
+        console.log('🔄 Actualización de incidente:', payload);
+        setIncidents((prev) =>
+          prev.map((inc) =>
+            inc.incidentId === payload.incidentId ? payload : inc
+          )
         );
-      }
-      break;
+        if (selectedIncident?.incidentId === payload.incidentId) {
+          setSelectedIncident(payload);
+        }
+        break;
 
-    default:
-      console.log('⚠️ Tipo de mensaje desconocido:', eventType);
-  }
-    }, [lastMessage]);
+      case 'ASSIGN_INCIDENT':
+        console.log('👷 Asignación de incidente:', payload);
+        setIncidents((prev) =>
+          prev.map((inc) =>
+            inc.incidentId === payload.incidentId ? payload : inc
+          )
+        );
+        if (selectedIncident?.incidentId === payload.incidentId) {
+          setSelectedIncident(payload);
+        }
+        if (user?.role === 'admin') {
+          fetchWorkers();
+        }
+        break;
+
+      case 'DELETE_INCIDENT':
+        console.log('🗑️ Eliminación de incidente');
+        const deletedId = payload.incidentId || lastMessage.incidentId;
+        setIncidents((prev) => prev.filter((inc) => inc.incidentId !== deletedId));
+        if (selectedIncident?.incidentId === deletedId) {
+          setSelectedIncident(null);
+        }
+        break;
+
+      case 'UPDATE_WORKER':
+        if (user?.role === 'admin') {
+          console.log('👤 Actualización de trabajador');
+          setWorkers((prev) =>
+            prev.map((w) => (w.userId === payload.userId ? payload : w))
+          );
+        }
+        break;
+
+      default:
+        console.log('⚠️ Tipo de mensaje desconocido:', eventType);
+    }
+  }, [lastMessage, selectedIncident, user?.role]);
 
   const fetchData = async () => {
     try {
@@ -116,10 +114,13 @@ useEffect(() => {
 
   const fetchWorkers = async () => {
     try {
-      const workerData = await workerService.getWorkers({ sortBy: 'workload', order: 'asc' });
-      setWorkers(workerData);
+      const response = await workerService.getWorkers({ sortBy: 'workload', order: 'asc' }) as any;
+      // El backend devuelve { message: "...", data: { workers: [...], count, sortedBy, order } }
+      const workersData = response?.data?.workers || [];
+      setWorkers(Array.isArray(workersData) ? workersData : []);
     } catch (workerErr) {
       console.error('Error al cargar trabajadores:', workerErr);
+      setWorkers([]);
     }
   };
 
@@ -295,9 +296,6 @@ useEffect(() => {
     </div>
   );
 }
-
-// [Los componentes IncidentCard, StatsPanel, WorkersPanel, CreateIncidentModal, 
-// IncidentDetailModal, StatusBadge, PriorityBadge permanecen exactamente iguales]
 
 function IncidentCard({ incident, onClick }: any) {
   const statusColors: any = {

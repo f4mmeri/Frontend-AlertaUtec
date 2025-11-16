@@ -5,6 +5,8 @@ export interface CurrentIncident {
   title: string;
   priority: IncidentPriority;
   status: IncidentStatus;
+  category: string;
+  location: string;
   assignedAt: number;
 }
 
@@ -27,4 +29,18 @@ export interface Worker {
   status: 'available' | 'moderate' | 'busy';
   currentIncidents?: CurrentIncident[];
   stats?: WorkerStats;
+}
+
+export interface WorkersResponse {
+  message: string;
+  data: {
+    workers: Worker[];
+    count: number;
+    sortedBy: string;
+    order: string;
+    filteredBy?: {
+      status?: string;
+      specialty?: string;
+    };
+  };
 }
