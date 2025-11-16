@@ -11,6 +11,8 @@ import { Worker} from '../types/worker.types';
 import { CATEGORIES, PRIORITIES, STATUSES, ROLES } from '../utils/constants';
 import UTECLogo from '../components/UTECLogo';
 
+import { Upload, X as XIcon } from 'lucide-react'; // Asegúrate de importar Upload
+
 export default function IncidentsPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -605,6 +607,8 @@ function WorkerCard({ worker }: { worker: Worker }) {
 
 function CreateIncidentModal({ onClose, onCreate }: any) {
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -613,26 +617,81 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
     location: { building: '', floor: 1, room: '', specificLocation: '' },
   });
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        alert('Por favor selecciona un archivo de imagen válido');
+        return;
+      }
+
+      // Validar tamaño (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('La imagen no debe superar los 5MB');
+        return;
+      }
+
+      setImageFile(file);
+
+      // Crear preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await onCreate(formData);
-    setLoading(false);
+
+    try {
+      // Crear FormData para enviar archivo
+      const submitData: any = { ...formData };
+      
+      if (imageFile) {
+        // Convertir imagen a base64 para enviar al backend
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64Image = reader.result as string;
+          submitData.image = base64Image;
+          submitData.imageName = imageFile.name;
+          submitData.imageType = imageFile.type;
+          
+          await onCreate(submitData);
+          setLoading(false);
+        };
+        reader.readAsDataURL(imageFile);
+      } else {
+        await onCreate(submitData);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error al crear incidente:', error);
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/20">
-        <div className="sticky top-0 bg-blue-900/80 backdrop-blur-lg border-b border-white/20 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Nuevo Incidente</h2>
-          <button onClick={onClose} className="text-white hover:text-blue-200 transition-colors">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+          <h2 className="text-2xl font-bold text-gray-800">Nuevo Incidente</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-white mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Título *
             </label>
             <input
@@ -640,58 +699,105 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
               placeholder="Ej: Luz fundida en Aula 302"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Descripción *
             </label>
             <textarea
               placeholder="Describe el problema en detalle..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all h-32"
+              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 h-32"
               required
             />
           </div>
 
+          {/* Sección de carga de imagen */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Imagen (opcional)
+            </label>
+            
+            {!imagePreview ? (
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="image-upload"
+                />
+                <label htmlFor="image-upload" className="cursor-pointer">
+                  <Upload className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600 mb-1">
+                    Click para subir una imagen
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    PNG, JPG, JPEG hasta 5MB
+                  </p>
+                </label>
+              </div>
+            ) : (
+              <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-64 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition shadow-lg"
+                  title="Eliminar imagen"
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-xs">
+                  {imageFile?.name}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Categoría *
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
               >
                 {Object.entries(CATEGORIES).map(([key, label]) => (
-                  <option key={key} value={key} className="bg-blue-900 text-white">{label}</option>
+                  <option key={key} value={key}>{label}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Prioridad *
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
               >
                 {Object.entries(PRIORITIES).map(([key, label]) => (
-                  <option key={key} value={key} className="bg-blue-900 text-white">{label}</option>
+                  <option key={key} value={key}>{label}</option>
                 ))}
               </select>
             </div>
           </div>
 
           <div className="space-y-3">
-            <h3 className="font-semibold text-white">Ubicación</h3>
+            <h3 className="font-semibold text-gray-700">Ubicación</h3>
             <div className="grid grid-cols-2 gap-4">
               <input
                 type="text"
@@ -703,7 +809,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     location: { ...formData.location, building: e.target.value },
                   })
                 }
-                className="px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
                 required
               />
 
@@ -717,7 +823,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     location: { ...formData.location, floor: parseInt(e.target.value) },
                   })
                 }
-                className="px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
                 required
               />
 
@@ -731,7 +837,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     location: { ...formData.location, room: e.target.value },
                   })
                 }
-                className="px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
                 required
               />
 
@@ -745,7 +851,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     location: { ...formData.location, specificLocation: e.target.value },
                   })
                 }
-                className="px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>
@@ -753,15 +859,24 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-blue-900 py-3 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-105 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {loading ? 'Creando...' : 'Crear Incidente'}
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Creando...
+              </>
+            ) : (
+              'Crear Incidente'
+            )}
           </button>
         </form>
       </div>
     </div>
   );
 }
+
+
 
 // REEMPLAZA la función IncidentDetailModal completa en IncidentsPage.tsx
 
@@ -805,50 +920,89 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
         : incident.assignedTo.userId === userId));
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-white/20">
-        <div className="sticky top-0 bg-blue-900/80 backdrop-blur-lg border-b border-white/20 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Detalle del Incidente</h2>
-          <button onClick={onClose} className="text-white hover:text-blue-200 transition-colors">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-800">Detalle del Incidente</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <div className="p-6 space-y-6">
           <div>
-            <h3 className="text-2xl font-bold text-white mb-2">{incident.title}</h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">{incident.title}</h3>
             <div className="flex flex-wrap gap-2">
               <StatusBadge status={incident.status} />
               <PriorityBadge priority={incident.priority} />
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-500/30 text-purple-200 border border-purple-400/30">
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                 {CATEGORIES[incident.category as keyof typeof CATEGORIES]}
               </span>
             </div>
           </div>
 
           <div>
-            <h4 className="font-semibold text-white mb-2">Descripción</h4>
-            <p className="text-blue-200">{incident.description}</p>
+            <h4 className="font-semibold text-gray-700 mb-2">Descripción</h4>
+            <p className="text-gray-600">{incident.description}</p>
           </div>
 
+          {/* Mostrar imagen si existe - soporta ambos formatos */}
+          {(incident.imageUrl || (incident.images && incident.images.length > 0)) && (
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-2">
+                {incident.images && incident.images.length > 1 ? 'Imágenes' : 'Imagen'}
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Si hay array de imágenes */}
+                {incident.images && incident.images.length > 0 ? (
+                  incident.images.map((imageUrl: string, index: number) => (
+                    <div key={index} className="rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={imageUrl}
+                        alt={`${incident.title} - Imagen ${index + 1}`}
+                        className="w-full h-64 object-cover bg-gray-50 cursor-pointer hover:opacity-90 transition"
+                        onClick={() => window.open(imageUrl, '_blank')}
+                        title="Click para ver en tamaño completo"
+                      />
+                    </div>
+                  ))
+                ) : incident.imageUrl ? (
+                  /* Si solo hay imageUrl (retrocompatibilidad) */
+                  <div className="rounded-lg overflow-hidden border border-gray-200 md:col-span-2">
+                    <img
+                      src={incident.imageUrl}
+                      alt={incident.title}
+                      className="w-full max-h-96 object-contain bg-gray-50 cursor-pointer hover:opacity-90 transition"
+                      onClick={() => window.open(incident.imageUrl, '_blank')}
+                      title="Click para ver en tamaño completo"
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Click en las imágenes para verlas en tamaño completo
+              </p>
+            </div>
+          )}
+
           <div>
-            <h4 className="font-semibold text-white mb-2 flex items-center gap-2">
+            <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
               <MapPin className="w-5 h-5" />
               Ubicación
             </h4>
-            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 space-y-1 border border-white/20">
-              <p className="text-blue-200">
-                <strong className="text-white">Edificio:</strong> {incident.location.building}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-1">
+              <p className="text-gray-700">
+                <strong>Edificio:</strong> {incident.location.building}
               </p>
-              <p className="text-blue-200">
-                <strong className="text-white">Piso:</strong> {incident.location.floor}
+              <p className="text-gray-700">
+                <strong>Piso:</strong> {incident.location.floor}
               </p>
-              <p className="text-blue-200">
-                <strong className="text-white">Sala:</strong> {incident.location.room}
+              <p className="text-gray-700">
+                <strong>Sala:</strong> {incident.location.room}
               </p>
               {incident.location.specificLocation && (
-                <p className="text-blue-200">
-                  <strong className="text-white">Detalles:</strong> {incident.location.specificLocation}
+                <p className="text-gray-700">
+                  <strong>Detalles:</strong> {incident.location.specificLocation}
                 </p>
               )}
             </div>
@@ -856,14 +1010,14 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="font-semibold text-white mb-2">Reportado por</h4>
-              <div className="bg-white/10 backdrop-blur-lg rounded-lg p-3 border border-white/20">
+              <h4 className="font-semibold text-gray-700 mb-2">Reportado por</h4>
+              <div className="bg-gray-50 rounded-lg p-3">
                 {typeof incident.reportedBy === 'string' ? (
-                  <p className="text-blue-200">{incident.reportedBy}</p>
+                  <p className="text-gray-700">{incident.reportedBy}</p>
                 ) : (
                   <>
-                    <p className="text-white font-medium">{incident.reportedBy.name}</p>
-                    <p className="text-sm text-blue-200">{incident.reportedBy.email}</p>
+                    <p className="text-gray-700 font-medium">{incident.reportedBy.name}</p>
+                    <p className="text-sm text-gray-600">{incident.reportedBy.email}</p>
                   </>
                 )}
               </div>
@@ -871,14 +1025,14 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
 
             {incident.assignedTo && (
               <div>
-                <h4 className="font-semibold text-white mb-2">Asignado a</h4>
-                <div className="bg-white/10 backdrop-blur-lg rounded-lg p-3 border border-white/20">
+                <h4 className="font-semibold text-gray-700 mb-2">Asignado a</h4>
+                <div className="bg-gray-50 rounded-lg p-3">
                   {typeof incident.assignedTo === 'string' ? (
-                    <p className="text-blue-200">{incident.assignedTo}</p>
+                    <p className="text-gray-700">{incident.assignedTo}</p>
                   ) : (
                     <>
-                      <p className="text-white font-medium">{incident.assignedTo.name}</p>
-                      <p className="text-sm text-blue-200">Trabajador</p>
+                      <p className="text-gray-700 font-medium">{incident.assignedTo.name}</p>
+                      <p className="text-sm text-gray-600">Trabajador</p>
                     </>
                   )}
                 </div>
@@ -887,19 +1041,19 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
           </div>
 
           {userRole === 'admin' && !incident.assignedTo && workers.length > 0 && (
-            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 border border-white/20">
-              <h4 className="font-semibold text-white mb-3">Asignar Trabajador</h4>
+            <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+              <h4 className="font-semibold text-gray-700 mb-3">Asignar Trabajador</h4>
               <div className="flex gap-3">
                 <select
                   value={selectedWorker}
                   onChange={(e) => setSelectedWorker(e.target.value)}
-                  className="flex-1 px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+                  className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="" className="bg-blue-900 text-white">Seleccionar trabajador...</option>
+                  <option value="">Seleccionar trabajador...</option>
                   {workers
                     .filter((w: Worker) => w.status !== 'busy')
                     .map((w: Worker) => (
-                      <option key={w.userId} value={w.userId} className="bg-blue-900 text-white">
+                      <option key={w.userId} value={w.userId}>
                         {w.name} - {w.specialty} ({w.activeIncidents} activos)
                       </option>
                     ))}
@@ -907,7 +1061,7 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
                 <button
                   onClick={handleAssign}
                   disabled={!selectedWorker}
-                  className="px-6 py-2 bg-white text-blue-900 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-105 font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
                 >
                   Asignar
                 </button>
@@ -916,15 +1070,15 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
           )}
 
           {canUpdate && canTransition && (
-            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 border border-white/20">
-              <h4 className="font-semibold text-white mb-3">Actualizar Incidente</h4>
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <h4 className="font-semibold text-gray-700 mb-3">Actualizar Incidente</h4>
               
               {/* Mostrar flujo de estados */}
-              <div className="mb-4 p-3 bg-white/5 rounded-lg border border-white/20">
-                <p className="text-xs text-blue-200 mb-2 font-medium">Progresión del estado:</p>
+              <div className="mb-4 p-3 bg-white rounded-lg border border-blue-200">
+                <p className="text-xs text-gray-600 mb-2 font-medium">Progresión del estado:</p>
                 <div className="flex items-center gap-2 flex-wrap">
                   <StatusBadge status={incident.status} />
-                  <span className="text-blue-200">→</span>
+                  <span className="text-gray-400">→</span>
                   <StatusBadge status={nextStatus} />
                 </div>
               </div>
@@ -932,13 +1086,13 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
               <div className="space-y-3">
                 {/* Campo de solo lectura mostrando el siguiente estado */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Cambiar estado a:
                   </label>
-                  <div className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white font-medium">
+                  <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium">
                     {STATUSES[nextStatus as keyof typeof STATUSES]}
                   </div>
-                  <p className="text-xs text-blue-200 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Los incidentes solo pueden avanzar al siguiente estado en la secuencia
                   </p>
                 </div>
@@ -947,14 +1101,14 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
                   placeholder="Agregar comentario sobre la actualización... (requerido)"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all h-24"
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 h-24"
                   required
                 />
                 
                 <button
                   onClick={handleUpdate}
                   disabled={!comment.trim()}
-                  className="w-full px-6 py-3 bg-white text-blue-900 rounded-lg hover:bg-blue-50 font-semibold shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Avanzar a: {STATUSES[nextStatus as keyof typeof STATUSES]}
                 </button>
@@ -963,12 +1117,12 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
           )}
 
           {canUpdate && !canTransition && incident.status === 'closed' && (
-            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 border border-white/20">
-              <div className="flex items-center gap-3 text-blue-200">
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center gap-3 text-gray-600">
                 <AlertCircle className="w-5 h-5" />
                 <div>
-                  <p className="font-medium text-white">Incidente cerrado</p>
-                  <p className="text-sm text-blue-200">Este incidente ha completado su ciclo y no puede ser actualizado.</p>
+                  <p className="font-medium">Incidente cerrado</p>
+                  <p className="text-sm">Este incidente ha completado su ciclo y no puede ser actualizado.</p>
                 </div>
               </div>
             </div>
