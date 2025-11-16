@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Search, Plus, MapPin, Clock, X, Bell, LogOut, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Plus, MapPin, Clock, X, Bell, LogOut, AlertCircle, Home } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useWebSocket } from '../context/WebSocketContext';
 import { incidentService } from '../services/incidentService';
@@ -8,9 +9,11 @@ import { useNotification } from '../hooks/useNotification';
 import { Incident, CreateIncidentData } from '../types/incident.types';
 import { Worker} from '../types/worker.types';
 import { CATEGORIES, PRIORITIES, STATUSES, ROLES } from '../utils/constants';
+import UTECLogo from '../components/UTECLogo';
 
 export default function IncidentsPage() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const { lastMessage } = useWebSocket();
   const { addNotification } = useNotification();
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -173,24 +176,37 @@ export default function IncidentsPage() {
   );
 
   return (
-    <div className="min-h-screen from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 relative overflow-hidden">
+      {/* Animated background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+      </div>
+
       {/* Header */}
-      <header className="bg-white shadow-md sticky top-0 z-40">
+      <header className="relative z-10 bg-white/10 backdrop-blur-lg border-b border-white/20 sticky top-0 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-8 h-8 text-indigo-600" />
+          <div className="flex items-center gap-4">
+            <UTECLogo size="sm" className="shadow-lg" />
             <div>
-              <h1 className="text-xl font-bold text-gray-800">Gestión de Incidentes</h1>
-              <p className="text-sm text-gray-600">{user?.name} - {ROLES[user?.role || 'alumno']}</p>
+              <h1 className="text-xl font-bold text-white">Gestión de Incidentes</h1>
+              <p className="text-sm text-blue-200">{user?.name} - {ROLES[user?.role || 'alumno']}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button className="relative p-2 hover:bg-gray-100 rounded-full transition">
-              <Bell className="w-6 h-6 text-gray-600" />
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 text-white hover:text-blue-200 hover:bg-white/10 rounded-lg transition-colors"
+              title="Ir al inicio"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+            <button className="relative p-2 text-white hover:text-blue-200 hover:bg-white/10 rounded-lg transition-colors">
+              <Bell className="w-6 h-6" />
             </button>
             <button
               onClick={logout}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-100 transition"
+              className="flex items-center gap-2 text-white hover:text-blue-200 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
             >
               <LogOut className="w-5 h-5" />
               <span className="hidden sm:inline">Salir</span>
@@ -199,19 +215,19 @@ export default function IncidentsPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-6">
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-4 mb-6 border border-white/20 animate-slide-up">
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-200" />
                 <input
                   type="text"
                   placeholder="Buscar incidentes..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -220,29 +236,29 @@ export default function IncidentsPage() {
               <select
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="px-3 py-2 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
               >
-                <option value="">Todos los estados</option>
+                <option value="" className="bg-blue-900 text-white">Todos los estados</option>
                 {Object.entries(STATUSES).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                  <option key={key} value={key} className="bg-blue-900 text-white">{label}</option>
                 ))}
               </select>
 
               <select
                 value={filters.priority}
                 onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="px-3 py-2 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
               >
-                <option value="">Todas las prioridades</option>
+                <option value="" className="bg-blue-900 text-white">Todas las prioridades</option>
                 {Object.entries(PRIORITIES).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                  <option key={key} value={key} className="bg-blue-900 text-white">{label}</option>
                 ))}
               </select>
 
               {user?.role === 'alumno' && (
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+                  className="flex items-center gap-2 bg-white text-blue-900 px-4 py-2 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-105 font-semibold shadow-lg"
                 >
                   <Plus className="w-5 h-5" />
                   Nuevo Incidente
@@ -257,11 +273,11 @@ export default function IncidentsPage() {
           {/* Incidents List */}
           <div className="lg:col-span-2 space-y-4">
             {loading ? (
-              <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-8 text-center text-blue-200 border border-white/20">
                 Cargando...
               </div>
             ) : filteredIncidents.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-8 text-center text-blue-200 border border-white/20">
                 No hay incidentes que mostrar
               </div>
             ) : (
@@ -310,45 +326,45 @@ export default function IncidentsPage() {
 
 function IncidentCard({ incident, onClick }: any) {
   const statusColors: any = {
-    pending: 'bg-gray-100 text-gray-800',
-    assigned: 'bg-blue-100 text-blue-800',
-    in_progress: 'bg-yellow-100 text-yellow-800',
-    resolved: 'bg-green-100 text-green-800',
-    closed: 'bg-gray-100 text-gray-600',
+    pending: 'bg-gray-500/30 text-gray-200 border-gray-400/30',
+    assigned: 'bg-blue-500/30 text-blue-200 border-blue-400/30',
+    in_progress: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30',
+    resolved: 'bg-green-500/30 text-green-200 border-green-400/30',
+    closed: 'bg-gray-500/30 text-gray-300 border-gray-400/30',
   };
 
   const priorityColors: any = {
-    low: 'bg-blue-100 text-blue-800',
-    medium: 'bg-yellow-100 text-yellow-800',
-    high: 'bg-orange-100 text-orange-800',
-    urgent: 'bg-red-100 text-red-800',
+    low: 'bg-blue-500/30 text-blue-200 border-blue-400/30',
+    medium: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30',
+    high: 'bg-orange-500/30 text-orange-200 border-orange-400/30',
+    urgent: 'bg-red-500/30 text-red-200 border-red-400/30',
   };
 
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition cursor-pointer"
+      className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-4 hover:bg-white/20 transition-all transform hover:scale-[1.02] cursor-pointer border border-white/20"
     >
       <div className="flex justify-between items-start mb-3">
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-800 text-lg">{incident.title}</h3>
-          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{incident.description}</p>
+          <h3 className="font-semibold text-white text-lg">{incident.title}</h3>
+          <p className="text-sm text-blue-200 mt-1 line-clamp-2">{incident.description}</p>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${priorityColors[incident.priority]}`}>
+        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${priorityColors[incident.priority]}`}>
           {PRIORITIES[incident.priority as keyof typeof PRIORITIES]}
         </span>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[incident.status]}`}>
+        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[incident.status]}`}>
           {STATUSES[incident.status as keyof typeof STATUSES]}
         </span>
-        <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+        <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-500/30 text-purple-200 border border-purple-400/30">
           {CATEGORIES[incident.category as keyof typeof CATEGORIES]}
         </span>
       </div>
 
-      <div className="flex items-center gap-4 text-sm text-gray-600">
+      <div className="flex items-center gap-4 text-sm text-blue-200">
         <div className="flex items-center gap-1">
           <MapPin className="w-4 h-4" />
           <span>{incident.location.building} - {incident.location.room}</span>
@@ -371,8 +387,8 @@ function StatsPanel({ incidents }: { incidents: Incident[] }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4">
-      <h3 className="font-semibold text-gray-800 mb-3">Resumen</h3>
+    <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-4 border border-white/20 animate-slide-up-delay">
+      <h3 className="font-semibold text-white mb-3">Resumen</h3>
       <div className="space-y-2">
         <StatItem label="Pendientes" value={stats.pending} color="yellow" />
         <StatItem label="En Progreso" value={stats.inProgress} color="blue" />
@@ -385,16 +401,16 @@ function StatsPanel({ incidents }: { incidents: Incident[] }) {
 
 function StatItem({ label, value, color }: any) {
   const colors: any = {
-    yellow: 'bg-yellow-100 text-yellow-800',
-    blue: 'bg-blue-100 text-blue-800',
-    green: 'bg-green-100 text-green-800',
-    red: 'bg-red-100 text-red-800',
+    yellow: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30',
+    blue: 'bg-blue-500/30 text-blue-200 border-blue-400/30',
+    green: 'bg-green-500/30 text-green-200 border-green-400/30',
+    red: 'bg-red-500/30 text-red-200 border-red-400/30',
   };
 
   return (
     <div className="flex justify-between items-center">
-      <span className="text-gray-700">{label}</span>
-      <span className={`px-3 py-1 rounded-full text-sm font-bold ${colors[color]}`}>
+      <span className="text-blue-200">{label}</span>
+      <span className={`px-3 py-1 rounded-full text-sm font-bold border ${colors[color]}`}>
         {value}
       </span>
     </div>
@@ -404,9 +420,9 @@ function StatItem({ label, value, color }: any) {
 function WorkersPanel({ workers }: { workers: Worker[] }) {
   if (!workers || workers.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">Personal Disponible</h3>
-        <div className="text-center py-8 text-gray-500">
+      <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-4 border border-white/20 animate-slide-up-delay-2">
+        <h3 className="font-semibold text-white mb-3">Personal Disponible</h3>
+        <div className="text-center py-8 text-blue-200">
           <p className="text-sm">No hay trabajadores disponibles</p>
         </div>
       </div>
@@ -427,27 +443,27 @@ function WorkersPanel({ workers }: { workers: Worker[] }) {
   const busyCount = workers.filter(w => w.status === 'busy').length;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4">
+    <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-4 border border-white/20 animate-slide-up-delay-2">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-800">Personal Disponible</h3>
-        <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full font-medium">
+        <h3 className="font-semibold text-white">Personal Disponible</h3>
+        <span className="text-xs bg-white/20 text-white px-2 py-1 rounded-full font-medium border border-white/30">
           {workers.length} total
         </span>
       </div>
 
       {/* Resumen rápido */}
       <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className="bg-green-50 rounded-lg p-2 text-center">
-          <p className="text-2xl font-bold text-green-700">{availableCount}</p>
-          <p className="text-xs text-green-600">Disponibles</p>
+        <div className="bg-green-500/20 rounded-lg p-2 text-center border border-green-400/30">
+          <p className="text-2xl font-bold text-green-200">{availableCount}</p>
+          <p className="text-xs text-green-200">Disponibles</p>
         </div>
-        <div className="bg-yellow-50 rounded-lg p-2 text-center">
-          <p className="text-2xl font-bold text-yellow-700">{moderateCount}</p>
-          <p className="text-xs text-yellow-600">Moderados</p>
+        <div className="bg-yellow-500/20 rounded-lg p-2 text-center border border-yellow-400/30">
+          <p className="text-2xl font-bold text-yellow-200">{moderateCount}</p>
+          <p className="text-xs text-yellow-200">Moderados</p>
         </div>
-        <div className="bg-red-50 rounded-lg p-2 text-center">
-          <p className="text-2xl font-bold text-red-700">{busyCount}</p>
-          <p className="text-xs text-red-600">Ocupados</p>
+        <div className="bg-red-500/20 rounded-lg p-2 text-center border border-red-400/30">
+          <p className="text-2xl font-bold text-red-200">{busyCount}</p>
+          <p className="text-xs text-red-200">Ocupados</p>
         </div>
       </div>
 
@@ -465,21 +481,21 @@ function WorkerCard({ worker }: { worker: Worker }) {
   const statusConfig: any = {
     available: {
       label: 'Disponible',
-      color: 'bg-green-100 text-green-800 border-green-200',
+      color: 'bg-green-500/30 text-green-200 border-green-400/30',
       icon: '✓',
-      bgCard: 'bg-green-50/50'
+      bgCard: 'bg-green-500/10'
     },
     moderate: {
       label: 'Moderado',
-      color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      color: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30',
       icon: '⚡',
-      bgCard: 'bg-yellow-50/50'
+      bgCard: 'bg-yellow-500/10'
     },
     busy: {
       label: 'Ocupado',
-      color: 'bg-red-100 text-red-800 border-red-200',
+      color: 'bg-red-500/30 text-red-200 border-red-400/30',
       icon: '⚠',
-      bgCard: 'bg-red-50/50'
+      bgCard: 'bg-red-500/10'
     }
   };
 
@@ -491,24 +507,24 @@ function WorkerCard({ worker }: { worker: Worker }) {
   const avgResolutionTime = worker.stats?.avgResolutionTimeHours || 0;
 
   return (
-    <div className={`rounded-lg p-3 border-2 ${config.color.split(' ')[0]}/20 hover:shadow-md transition-all cursor-pointer`}>
+    <div className={`rounded-xl p-3 border ${config.color.split(' ')[2]} bg-white/5 hover:bg-white/10 transition-all cursor-pointer backdrop-blur-sm`}>
       {/* Header con nombre y estado */}
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <p className="font-semibold text-gray-800 text-sm">{worker.name}</p>
+            <p className="font-semibold text-white text-sm">{worker.name}</p>
             {rating > 0 && (
-              <span className="text-xs text-yellow-600">
+              <span className="text-xs text-yellow-200">
                 ⭐ {rating.toFixed(1)}
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-600 mt-0.5">{worker.specialty || 'General'}</p>
+          <p className="text-xs text-blue-200 mt-0.5">{worker.specialty || 'General'}</p>
           {worker.email && (
-            <p className="text-xs text-gray-500 truncate">{worker.email}</p>
+            <p className="text-xs text-blue-300 truncate">{worker.email}</p>
           )}
         </div>
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color} flex items-center gap-1`}>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium border ${config.color} flex items-center gap-1`}>
           <span>{config.icon}</span>
           <span>{config.label}</span>
         </span>
@@ -517,17 +533,17 @@ function WorkerCard({ worker }: { worker: Worker }) {
       {/* Barra de carga de trabajo */}
       <div className="mb-2">
         <div className="flex justify-between items-center mb-1">
-          <span className="text-xs text-gray-600 font-medium">Carga de trabajo</span>
-          <span className="text-xs font-semibold text-gray-700">
+          <span className="text-xs text-blue-200 font-medium">Carga de trabajo</span>
+          <span className="text-xs font-semibold text-white">
             {worker.workloadPoints}/{maxWorkload} pts
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${
-              workloadPercentage < 50 ? 'bg-green-500' :
-              workloadPercentage < 75 ? 'bg-yellow-500' :
-              'bg-red-500'
+              workloadPercentage < 50 ? 'bg-green-400' :
+              workloadPercentage < 75 ? 'bg-yellow-400' :
+              'bg-red-400'
             }`}
             style={{ width: `${workloadPercentage}%` }}
           />
@@ -537,17 +553,17 @@ function WorkerCard({ worker }: { worker: Worker }) {
       {/* Estadísticas */}
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-3">
-          <span className="text-gray-600">
-            <span className="font-semibold text-gray-800">{worker.activeIncidents || 0}</span> activos
+          <span className="text-blue-200">
+            <span className="font-semibold text-white">{worker.activeIncidents || 0}</span> activos
           </span>
           {totalResolved > 0 && (
-            <span className="text-gray-600">
-              <span className="font-semibold text-green-700">{totalResolved}</span> resueltos
+            <span className="text-blue-200">
+              <span className="font-semibold text-green-200">{totalResolved}</span> resueltos
             </span>
           )}
         </div>
         {avgResolutionTime > 0 && (
-          <span className="text-gray-500 text-xs">
+          <span className="text-blue-300 text-xs">
             ~{avgResolutionTime.toFixed(1)}h
           </span>
         )}
@@ -555,18 +571,18 @@ function WorkerCard({ worker }: { worker: Worker }) {
 
       {/* Incidentes actuales (si tiene) */}
       {worker.currentIncidents && worker.currentIncidents.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-200">
-          <p className="text-xs font-medium text-gray-700 mb-1">Trabajando en:</p>
+        <div className="mt-2 pt-2 border-t border-white/20">
+          <p className="text-xs font-medium text-white mb-1">Trabajando en:</p>
           <div className="space-y-1">
             {worker.currentIncidents.slice(0, 2).map((inc: any) => (
-              <div key={inc.incidentId} className="text-xs bg-white rounded p-1.5 border border-gray-200">
+              <div key={inc.incidentId} className="text-xs bg-white/10 rounded-lg p-1.5 border border-white/20 backdrop-blur-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate flex-1 text-gray-700">{inc.title}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                    inc.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                    inc.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                    inc.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-blue-100 text-blue-700'
+                  <span className="truncate flex-1 text-blue-200">{inc.title}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-xs font-medium border ${
+                    inc.priority === 'urgent' ? 'bg-red-500/30 text-red-200 border-red-400/30' :
+                    inc.priority === 'high' ? 'bg-orange-500/30 text-orange-200 border-orange-400/30' :
+                    inc.priority === 'medium' ? 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30' :
+                    'bg-blue-500/30 text-blue-200 border-blue-400/30'
                   }`}>
                     {inc.priority === 'urgent' ? '🔥' : 
                      inc.priority === 'high' ? '⚡' :
@@ -576,7 +592,7 @@ function WorkerCard({ worker }: { worker: Worker }) {
               </div>
             ))}
             {worker.currentIncidents.length > 2 && (
-              <p className="text-xs text-gray-500 text-center">
+              <p className="text-xs text-blue-300 text-center">
                 +{worker.currentIncidents.length - 2} más
               </p>
             )}
@@ -605,18 +621,18 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-800">Nuevo Incidente</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/20">
+        <div className="sticky top-0 bg-blue-900/80 backdrop-blur-lg border-b border-white/20 px-6 py-4 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-white">Nuevo Incidente</h2>
+          <button onClick={onClose} className="text-white hover:text-blue-200 transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-white mb-1">
               Título *
             </label>
             <input
@@ -624,58 +640,58 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
               placeholder="Ej: Luz fundida en Aula 302"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-white mb-1">
               Descripción *
             </label>
             <textarea
               placeholder="Describe el problema en detalle..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 h-32"
+              className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all h-32"
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-white mb-1">
                 Categoría *
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
               >
                 {Object.entries(CATEGORIES).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                  <option key={key} value={key} className="bg-blue-900 text-white">{label}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-white mb-1">
                 Prioridad *
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
               >
                 {Object.entries(PRIORITIES).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                  <option key={key} value={key} className="bg-blue-900 text-white">{label}</option>
                 ))}
               </select>
             </div>
           </div>
 
           <div className="space-y-3">
-            <h3 className="font-semibold text-gray-700">Ubicación</h3>
+            <h3 className="font-semibold text-white">Ubicación</h3>
             <div className="grid grid-cols-2 gap-4">
               <input
                 type="text"
@@ -687,7 +703,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     location: { ...formData.location, building: e.target.value },
                   })
                 }
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
                 required
               />
 
@@ -701,7 +717,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     location: { ...formData.location, floor: parseInt(e.target.value) },
                   })
                 }
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
                 required
               />
 
@@ -715,7 +731,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     location: { ...formData.location, room: e.target.value },
                   })
                 }
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
                 required
               />
 
@@ -729,7 +745,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     location: { ...formData.location, specificLocation: e.target.value },
                   })
                 }
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
               />
             </div>
           </div>
@@ -737,7 +753,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-semibold disabled:opacity-50"
+            className="w-full bg-white text-blue-900 py-3 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-105 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {loading ? 'Creando...' : 'Crear Incidente'}
           </button>
@@ -789,50 +805,50 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
         : incident.assignedTo.userId === userId));
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-800">Detalle del Incidente</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-white/20">
+        <div className="sticky top-0 bg-blue-900/80 backdrop-blur-lg border-b border-white/20 px-6 py-4 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-white">Detalle del Incidente</h2>
+          <button onClick={onClose} className="text-white hover:text-blue-200 transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <div className="p-6 space-y-6">
           <div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">{incident.title}</h3>
+            <h3 className="text-2xl font-bold text-white mb-2">{incident.title}</h3>
             <div className="flex flex-wrap gap-2">
               <StatusBadge status={incident.status} />
               <PriorityBadge priority={incident.priority} />
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-500/30 text-purple-200 border border-purple-400/30">
                 {CATEGORIES[incident.category as keyof typeof CATEGORIES]}
               </span>
             </div>
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-700 mb-2">Descripción</h4>
-            <p className="text-gray-600">{incident.description}</p>
+            <h4 className="font-semibold text-white mb-2">Descripción</h4>
+            <p className="text-blue-200">{incident.description}</p>
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+            <h4 className="font-semibold text-white mb-2 flex items-center gap-2">
               <MapPin className="w-5 h-5" />
               Ubicación
             </h4>
-            <div className="bg-gray-50 rounded-lg p-4 space-y-1">
-              <p className="text-gray-700">
-                <strong>Edificio:</strong> {incident.location.building}
+            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 space-y-1 border border-white/20">
+              <p className="text-blue-200">
+                <strong className="text-white">Edificio:</strong> {incident.location.building}
               </p>
-              <p className="text-gray-700">
-                <strong>Piso:</strong> {incident.location.floor}
+              <p className="text-blue-200">
+                <strong className="text-white">Piso:</strong> {incident.location.floor}
               </p>
-              <p className="text-gray-700">
-                <strong>Sala:</strong> {incident.location.room}
+              <p className="text-blue-200">
+                <strong className="text-white">Sala:</strong> {incident.location.room}
               </p>
               {incident.location.specificLocation && (
-                <p className="text-gray-700">
-                  <strong>Detalles:</strong> {incident.location.specificLocation}
+                <p className="text-blue-200">
+                  <strong className="text-white">Detalles:</strong> {incident.location.specificLocation}
                 </p>
               )}
             </div>
@@ -840,14 +856,14 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="font-semibold text-gray-700 mb-2">Reportado por</h4>
-              <div className="bg-gray-50 rounded-lg p-3">
+              <h4 className="font-semibold text-white mb-2">Reportado por</h4>
+              <div className="bg-white/10 backdrop-blur-lg rounded-lg p-3 border border-white/20">
                 {typeof incident.reportedBy === 'string' ? (
-                  <p className="text-gray-700">{incident.reportedBy}</p>
+                  <p className="text-blue-200">{incident.reportedBy}</p>
                 ) : (
                   <>
-                    <p className="text-gray-700 font-medium">{incident.reportedBy.name}</p>
-                    <p className="text-sm text-gray-600">{incident.reportedBy.email}</p>
+                    <p className="text-white font-medium">{incident.reportedBy.name}</p>
+                    <p className="text-sm text-blue-200">{incident.reportedBy.email}</p>
                   </>
                 )}
               </div>
@@ -855,14 +871,14 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
 
             {incident.assignedTo && (
               <div>
-                <h4 className="font-semibold text-gray-700 mb-2">Asignado a</h4>
-                <div className="bg-gray-50 rounded-lg p-3">
+                <h4 className="font-semibold text-white mb-2">Asignado a</h4>
+                <div className="bg-white/10 backdrop-blur-lg rounded-lg p-3 border border-white/20">
                   {typeof incident.assignedTo === 'string' ? (
-                    <p className="text-gray-700">{incident.assignedTo}</p>
+                    <p className="text-blue-200">{incident.assignedTo}</p>
                   ) : (
                     <>
-                      <p className="text-gray-700 font-medium">{incident.assignedTo.name}</p>
-                      <p className="text-sm text-gray-600">Trabajador</p>
+                      <p className="text-white font-medium">{incident.assignedTo.name}</p>
+                      <p className="text-sm text-blue-200">Trabajador</p>
                     </>
                   )}
                 </div>
@@ -871,19 +887,19 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
           </div>
 
           {userRole === 'admin' && !incident.assignedTo && workers.length > 0 && (
-            <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
-              <h4 className="font-semibold text-gray-700 mb-3">Asignar Trabajador</h4>
+            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 border border-white/20">
+              <h4 className="font-semibold text-white mb-3">Asignar Trabajador</h4>
               <div className="flex gap-3">
                 <select
                   value={selectedWorker}
                   onChange={(e) => setSelectedWorker(e.target.value)}
-                  className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="flex-1 px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
                 >
-                  <option value="">Seleccionar trabajador...</option>
+                  <option value="" className="bg-blue-900 text-white">Seleccionar trabajador...</option>
                   {workers
                     .filter((w: Worker) => w.status !== 'busy')
                     .map((w: Worker) => (
-                      <option key={w.userId} value={w.userId}>
+                      <option key={w.userId} value={w.userId} className="bg-blue-900 text-white">
                         {w.name} - {w.specialty} ({w.activeIncidents} activos)
                       </option>
                     ))}
@@ -891,7 +907,7 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
                 <button
                   onClick={handleAssign}
                   disabled={!selectedWorker}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                  className="px-6 py-2 bg-white text-blue-900 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-105 font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   Asignar
                 </button>
@@ -900,15 +916,15 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
           )}
 
           {canUpdate && canTransition && (
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-              <h4 className="font-semibold text-gray-700 mb-3">Actualizar Incidente</h4>
+            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 border border-white/20">
+              <h4 className="font-semibold text-white mb-3">Actualizar Incidente</h4>
               
               {/* Mostrar flujo de estados */}
-              <div className="mb-4 p-3 bg-white rounded-lg border border-blue-200">
-                <p className="text-xs text-gray-600 mb-2 font-medium">Progresión del estado:</p>
+              <div className="mb-4 p-3 bg-white/5 rounded-lg border border-white/20">
+                <p className="text-xs text-blue-200 mb-2 font-medium">Progresión del estado:</p>
                 <div className="flex items-center gap-2 flex-wrap">
                   <StatusBadge status={incident.status} />
-                  <span className="text-gray-400">→</span>
+                  <span className="text-blue-200">→</span>
                   <StatusBadge status={nextStatus} />
                 </div>
               </div>
@@ -916,13 +932,13 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
               <div className="space-y-3">
                 {/* Campo de solo lectura mostrando el siguiente estado */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-white mb-2">
                     Cambiar estado a:
                   </label>
-                  <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium">
+                  <div className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white font-medium">
                     {STATUSES[nextStatus as keyof typeof STATUSES]}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-blue-200 mt-1">
                     Los incidentes solo pueden avanzar al siguiente estado en la secuencia
                   </p>
                 </div>
@@ -931,14 +947,14 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
                   placeholder="Agregar comentario sobre la actualización... (requerido)"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 h-24"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all h-24"
                   required
                 />
                 
                 <button
                   onClick={handleUpdate}
                   disabled={!comment.trim()}
-                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-6 py-3 bg-white text-blue-900 rounded-lg hover:bg-blue-50 font-semibold shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   Avanzar a: {STATUSES[nextStatus as keyof typeof STATUSES]}
                 </button>
@@ -947,12 +963,12 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
           )}
 
           {canUpdate && !canTransition && incident.status === 'closed' && (
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <div className="flex items-center gap-3 text-gray-600">
+            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 border border-white/20">
+              <div className="flex items-center gap-3 text-blue-200">
                 <AlertCircle className="w-5 h-5" />
                 <div>
-                  <p className="font-medium">Incidente cerrado</p>
-                  <p className="text-sm">Este incidente ha completado su ciclo y no puede ser actualizado.</p>
+                  <p className="font-medium text-white">Incidente cerrado</p>
+                  <p className="text-sm text-blue-200">Este incidente ha completado su ciclo y no puede ser actualizado.</p>
                 </div>
               </div>
             </div>
@@ -965,23 +981,23 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
 
 function StatusBadge({ status }: { status: string }) {
   const config: any = {
-    pending: { label: 'Pendiente', color: 'bg-gray-100 text-gray-800' },
-    assigned: { label: 'Asignado', color: 'bg-blue-100 text-blue-800' },
-    in_progress: { label: 'En Progreso', color: 'bg-yellow-100 text-yellow-800' },
-    resolved: { label: 'Resuelto', color: 'bg-green-100 text-green-800' },
-    closed: { label: 'Cerrado', color: 'bg-gray-100 text-gray-600' },
+    pending: { label: 'Pendiente', color: 'bg-gray-500/30 text-gray-200 border-gray-400/30' },
+    assigned: { label: 'Asignado', color: 'bg-blue-500/30 text-blue-200 border-blue-400/30' },
+    in_progress: { label: 'En Progreso', color: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30' },
+    resolved: { label: 'Resuelto', color: 'bg-green-500/30 text-green-200 border-green-400/30' },
+    closed: { label: 'Cerrado', color: 'bg-gray-500/30 text-gray-300 border-gray-400/30' },
   };
   const s = config[status] || config.pending;
-  return <span className={`px-3 py-1 rounded-full text-xs font-medium ${s.color}`}>{s.label}</span>;
+  return <span className={`px-3 py-1 rounded-full text-xs font-medium border ${s.color}`}>{s.label}</span>;
 }
 
 function PriorityBadge({ priority }: { priority: string }) {
   const config: any = {
-    low: { label: 'Baja', color: 'bg-blue-100 text-blue-800' },
-    medium: { label: 'Media', color: 'bg-yellow-100 text-yellow-800' },
-    high: { label: 'Alta', color: 'bg-orange-100 text-orange-800' },
-    urgent: { label: 'Urgente', color: 'bg-red-100 text-red-800' },
+    low: { label: 'Baja', color: 'bg-blue-500/30 text-blue-200 border-blue-400/30' },
+    medium: { label: 'Media', color: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30' },
+    high: { label: 'Alta', color: 'bg-orange-500/30 text-orange-200 border-orange-400/30' },
+    urgent: { label: 'Urgente', color: 'bg-red-500/30 text-red-200 border-red-400/30' },
   };
   const p = config[priority] || config.medium;
-  return <span className={`px-3 py-1 rounded-full text-xs font-medium ${p.color}`}>{p.label}</span>;
+  return <span className={`px-3 py-1 rounded-full text-xs font-medium border ${p.color}`}>{p.label}</span>;
 }
