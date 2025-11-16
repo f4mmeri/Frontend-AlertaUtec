@@ -65,9 +65,9 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}
               className="p-2 text-white hover:text-blue-200 hover:bg-white/10 rounded-lg transition-colors"
-              title="Ir al inicio"
+              title="Ir al dashboard"
             >
               <Home className="w-5 h-5" />
             </button>
