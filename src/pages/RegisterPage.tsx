@@ -362,8 +362,9 @@ export default function RegisterPage() {
 
       {/* Back to home button */}
       <button
+        type="button"
         onClick={() => navigate('/landing')}
-        className="absolute top-6 left-6 z-10 flex items-center space-x-2 text-white hover:text-blue-200 transition-colors animate-fade-in"
+        className="absolute top-6 left-6 z-50 flex items-center space-x-2 px-4 py-2 text-white hover:text-blue-200 hover:bg-white/10 rounded-lg transition-colors animate-fade-in pointer-events-auto"
       >
         <ArrowLeft className="w-5 h-5" />
         <span className="font-medium">Volver</span>
