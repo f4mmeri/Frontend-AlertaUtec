@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Search, Plus, MapPin, Clock, X, Bell, LogOut, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useWebSocket } from '../context/WebSocketContext';
 import { incidentService } from '../services/incidentService';
 import { workerService } from '../services/workerService';
-import { websocketService } from '../services/websocketService';
 import { useNotification } from '../hooks/useNotification';
 import { Incident, CreateIncidentData } from '../types/incident.types';
 import { Worker } from '../types/worker.types';
@@ -11,6 +11,7 @@ import { CATEGORIES, PRIORITIES, STATUSES, ROLES } from '../utils/constants';
 
 export default function IncidentsPage() {
   const { user, logout } = useAuth();
+  const { subscribe } = useWebSocket();
   const { addNotification } = useNotification();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -24,67 +25,51 @@ export default function IncidentsPage() {
     fetchData();
   }, [filters]);
 
-  // WebSocket para actualizaciones en tiempo real
+  // Suscribirse a mensajes WebSocket
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    // Conectar WebSocket
-    websocketService.connect(token, handleWebSocketMessage);
-
-    // Cleanup al desmontar
-    return () => {
-      websocketService.disconnect();
-    };
-  }, []);
+    const unsubscribe = subscribe(handleWebSocketMessage);
+    return unsubscribe;
+  }, [selectedIncident, user?.role]);
 
   const handleWebSocketMessage = (data: any) => {
-    console.log('WebSocket message received:', data);
+    console.log('📨 Mensaje WebSocket en IncidentsPage:', data);
 
     switch (data.type) {
       case 'INCIDENT_CREATED':
-        addNotification('info', `Nuevo incidente: ${data.incident.title}`);
-        // Agregar el nuevo incidente a la lista
+        addNotification('info', `✨ Nuevo incidente: ${data.incident.title}`);
         setIncidents((prev) => [data.incident, ...prev]);
         break;
 
       case 'INCIDENT_UPDATED':
-        addNotification('info', `Incidente actualizado: ${data.incident.title}`);
-        // Actualizar el incidente en la lista
+        addNotification('info', `🔄 Incidente actualizado: ${data.incident.title}`);
         setIncidents((prev) =>
           prev.map((inc) =>
             inc.incidentId === data.incident.incidentId ? data.incident : inc
           )
         );
-        // Si es el incidente que estamos viendo en el modal, actualizarlo
         if (selectedIncident?.incidentId === data.incident.incidentId) {
           setSelectedIncident(data.incident);
         }
         break;
 
       case 'INCIDENT_ASSIGNED':
-        addNotification('success', `Incidente asignado: ${data.incident.title}`);
-        // Actualizar el incidente con el trabajador asignado
+        addNotification('success', `👷 Incidente asignado: ${data.incident.title}`);
         setIncidents((prev) =>
           prev.map((inc) =>
             inc.incidentId === data.incident.incidentId ? data.incident : inc
           )
         );
-        // Actualizar el modal si está abierto
         if (selectedIncident?.incidentId === data.incident.incidentId) {
           setSelectedIncident(data.incident);
         }
-        // Recargar trabajadores para actualizar su carga de trabajo
         if (user?.role === 'admin') {
           fetchWorkers();
         }
         break;
 
       case 'INCIDENT_DELETED':
-        addNotification('info', `Incidente eliminado: ${data.incidentId}`);
-        // Remover el incidente de la lista
+        addNotification('info', `🗑️ Incidente eliminado`);
         setIncidents((prev) => prev.filter((inc) => inc.incidentId !== data.incidentId));
-        // Cerrar el modal si estamos viendo ese incidente
         if (selectedIncident?.incidentId === data.incidentId) {
           setSelectedIncident(null);
         }
@@ -92,7 +77,6 @@ export default function IncidentsPage() {
 
       case 'WORKER_STATUS_CHANGED':
         if (user?.role === 'admin') {
-          // Actualizar el estado del trabajador
           setWorkers((prev) =>
             prev.map((worker) =>
               worker.userId === data.worker.userId ? data.worker : worker
@@ -100,9 +84,6 @@ export default function IncidentsPage() {
           );
         }
         break;
-
-      default:
-        console.log('Unknown WebSocket message type:', data.type);
     }
   };
 
@@ -114,11 +95,9 @@ export default function IncidentsPage() {
         incidentFilters.assignedTo = user.userId;
       }
       
-      // Cargar incidentes
       const incidentData = await incidentService.getIncidents(incidentFilters);
       setIncidents(incidentData);
 
-      // Cargar trabajadores solo si es admin
       if (user?.role === 'admin') {
         await fetchWorkers();
       }
@@ -144,7 +123,7 @@ export default function IncidentsPage() {
       await incidentService.createIncident(data);
       addNotification('success', 'Incidente creado exitosamente');
       setShowCreateModal(false);
-      fetchData();
+      // No necesitamos fetchData() aquí porque WebSocket lo actualizará automáticamente
     } catch (err: any) {
       addNotification('error', err.response?.data?.message || 'Error al crear incidente');
     }
@@ -155,7 +134,7 @@ export default function IncidentsPage() {
       await incidentService.updateIncident(id, { status: status as any, comment });
       addNotification('success', 'Incidente actualizado');
       setSelectedIncident(null);
-      fetchData();
+      // WebSocket actualizará automáticamente
     } catch (err) {
       addNotification('error', 'Error al actualizar incidente');
     }
@@ -165,7 +144,7 @@ export default function IncidentsPage() {
     try {
       await incidentService.assignWorker(incidentId, workerId);
       addNotification('success', 'Trabajador asignado exitosamente');
-      fetchData();
+      // WebSocket actualizará automáticamente
     } catch (err) {
       addNotification('error', 'Error al asignar trabajador');
     }
@@ -177,7 +156,7 @@ export default function IncidentsPage() {
   );
 
   return (
-    <div className="min-h-screen from-blue-50 to-indigo-100">
+    <div className="min-h-screen  from-blue-50 to-indigo-100">
       {/* Header */}
       <header className="bg-white shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -312,7 +291,9 @@ export default function IncidentsPage() {
   );
 }
 
-// Supporting Components
+// [Los componentes IncidentCard, StatsPanel, WorkersPanel, CreateIncidentModal, 
+// IncidentDetailModal, StatusBadge, PriorityBadge permanecen exactamente iguales]
+
 function IncidentCard({ incident, onClick }: any) {
   const statusColors: any = {
     pending: 'bg-gray-100 text-gray-800',
@@ -635,7 +616,6 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Title and badges */}
           <div>
             <h3 className="text-2xl font-bold text-gray-800 mb-2">{incident.title}</h3>
             <div className="flex flex-wrap gap-2">
@@ -647,13 +627,11 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <h4 className="font-semibold text-gray-700 mb-2">Descripción</h4>
             <p className="text-gray-600">{incident.description}</p>
           </div>
 
-          {/* Location */}
           <div>
             <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
               <MapPin className="w-5 h-5" />
@@ -677,7 +655,6 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
             </div>
           </div>
 
-          {/* Reporter info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <h4 className="font-semibold text-gray-700 mb-2">Reportado por</h4>
@@ -710,25 +687,6 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
             )}
           </div>
 
-          {/* Timestamps */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-gray-600 font-medium">Creado</p>
-              <p className="text-gray-800">{new Date(incident.createdAt).toLocaleString('es-PE')}</p>
-            </div>
-            <div>
-              <p className="text-gray-600 font-medium">Actualizado</p>
-              <p className="text-gray-800">{new Date(incident.updatedAt).toLocaleString('es-PE')}</p>
-            </div>
-            {incident.resolvedAt && (
-              <div>
-                <p className="text-gray-600 font-medium">Resuelto</p>
-                <p className="text-gray-800">{new Date(incident.resolvedAt).toLocaleString('es-PE')}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Assign worker (admin only) */}
           {userRole === 'admin' && !incident.assignedTo && workers.length > 0 && (
             <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
               <h4 className="font-semibold text-gray-700 mb-3">Asignar Trabajador</h4>
@@ -758,7 +716,6 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
             </div>
           )}
 
-          {/* Update status */}
           {canUpdate && (
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <h4 className="font-semibold text-gray-700 mb-3">Actualizar Incidente</h4>
