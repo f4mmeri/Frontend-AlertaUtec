@@ -147,11 +147,23 @@ export default function IncidentsPage() {
 
   const handleAssignWorker = async (incidentId: string, workerId: string) => {
     try {
-      await incidentService.assignWorker(incidentId, workerId);
+      console.log('🔧 Intentando asignar:', { incidentId, workerId });
+      
+      const response = await incidentService.assignWorker(incidentId, workerId);
+      
+      console.log('✅ Asignación exitosa:', response);
       addNotification('success', 'Trabajador asignado exitosamente');
-      // WebSocket actualizará automáticamente
-    } catch (err) {
-      addNotification('error', 'Error al asignar trabajador');
+    } catch (err: any) {
+      console.error('❌ Error completo:', err);
+      console.error('❌ Error response:', err.response);
+      console.error('❌ Error data:', err.response?.data);
+      console.error('❌ Error message:', err.response?.data?.message);
+      
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error || 
+                          'Error al asignar trabajador';
+      
+      addNotification('error', errorMessage);
     }
   };
 
