@@ -1,3 +1,5 @@
+// incident.types.ts - Versión actualizada con soporte de imágenes
+
 export interface Location {
   building: string;
   floor: number;
@@ -36,7 +38,8 @@ export interface Incident {
   priority: IncidentPriority;
   status: IncidentStatus;
   location: Location;
-  images?: string[];
+  images?: string[];           // URLs de imágenes en S3
+  imageUrl?: string;           // URL de imagen principal (retrocompatibilidad)
   reportedBy: string | ReportedBy;
   assignedTo?: string | AssignedTo;
   createdAt: number;
@@ -51,7 +54,10 @@ export interface CreateIncidentData {
   category: string;
   priority: IncidentPriority;
   location: Location;
-  images?: string[];
+  images?: string[];           // URLs si ya existen
+  image?: string;              // Imagen en base64 para subir
+  imageName?: string;          // Nombre del archivo
+  imageType?: string;          // Tipo MIME (image/jpeg, image/png, etc)
 }
 
 export interface UpdateIncidentData {
