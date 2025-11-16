@@ -30,15 +30,19 @@ export default function IncidentsPage() {
       if (user?.role === 'worker') {
         incidentFilters.assignedTo = user.userId;
       }
+
       const incidentData = await incidentService.getIncidents(incidentFilters);
-      setIncidents(incidentData);
+      setIncidents(incidentData || []); // <-- seguro aunque falle
 
       if (user?.role === 'admin') {
         const workerData = await workerService.getWorkers({ sortBy: 'workload', order: 'asc' });
-        setWorkers(workerData);
+        setWorkers(workerData || []); // <-- seguro aunque falle
       }
-    } catch (err) {
-      addNotification('error', 'Error al cargar datos');
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      addNotification('error', err.response?.data?.message || 'Error al cargar datos');
+      setIncidents([]);
+      setWorkers([]);
     } finally {
       setLoading(false);
     }
@@ -82,7 +86,7 @@ export default function IncidentsPage() {
   );
 
   return (
-    <div className="min-h-screen  from-blue-50 to-indigo-100">
+    <div className="min-h-screen from-blue-50 to-indigo-100">
       {/* Header */}
       <header className="bg-white shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -169,9 +173,9 @@ export default function IncidentsPage() {
               <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
                 Cargando...
               </div>
-            ) : filteredIncidents.length === 0 ? (
+            ) : incidents.length === 0 ? (
               <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
-                No hay incidentes que mostrar
+                {searchTerm ? 'No se encontraron incidentes' : 'No hay incidentes que mostrar'}
               </div>
             ) : (
               filteredIncidents.map((incident) => (
@@ -216,7 +220,6 @@ export default function IncidentsPage() {
     </div>
   );
 }
-
 // Supporting Components
 function IncidentCard({ incident, onClick }: any) {
   const statusColors: any = {
