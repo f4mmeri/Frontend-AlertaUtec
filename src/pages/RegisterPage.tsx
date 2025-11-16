@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, ChevronDown } from 'lucide-react';
+import { ChevronDown, ArrowLeft } from 'lucide-react';
 import { authService } from '../services/authService';
 import { useNotification } from '../hooks/useNotification';
 import { UserRole } from '../types/user.types';
+import UTECLogo from '../components/UTECLogo';
 
 const COUNTRIES = [
   { code: '+51', flag: '🇵🇪', name: 'Perú', dialCode: '51' },
@@ -352,18 +353,40 @@ export default function RegisterPage() {
   const availableCareers = formData.faculty ? CAREERS_BY_FACULTY[formData.faculty] || [] : [];
 
   return (
-    <div className="min-h-screen from-indigo-500 to-purple-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="text-center mb-6">
-          <AlertCircle className="w-12 h-12 text-indigo-600 mx-auto mb-3" />
-          <h2 className="text-3xl font-bold text-gray-800">Registro</h2>
-          <p className="text-gray-600 mt-1">Sistema de Gestión de Incidentes</p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 relative overflow-hidden">
+      {/* Animated background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+      </div>
+
+      {/* Back to home button */}
+      <button
+        onClick={() => navigate('/')}
+        className="absolute top-6 left-6 z-10 flex items-center space-x-2 text-white hover:text-blue-200 transition-colors animate-fade-in"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span className="font-medium">Volver</span>
+      </button>
+
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/20 animate-slide-up">
+          <div className="text-center mb-6">
+            <div className="inline-block bg-white rounded-2xl shadow-lg p-3 mb-4 transform hover:scale-105 transition-transform">
+              <UTECLogo size="md" />
+            </div>
+            <h2 className="text-4xl font-extrabold text-white mb-2">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-200 via-white to-purple-200">
+                Registro
+              </span>
+            </h2>
+            <p className="text-blue-200">Sistema de Gestión de Incidentes</p>
+          </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-white mb-1">
                 Correo institucional *
               </label>
               <input
@@ -372,18 +395,18 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-                  errors.email ? 'border-red-500' : ''
+                className={`w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all ${
+                  errors.email ? 'border-red-400' : ''
                 }`}
                 placeholder="ejemplo@utec.edu.pe"
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                <p className="mt-1 text-sm text-red-300">{errors.email}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-white mb-1">
                 Contraseña *
               </label>
               <input
@@ -392,23 +415,23 @@ export default function RegisterPage() {
                 value={formData.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-                  errors.password ? 'border-red-500' : ''
+                className={`w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all ${
+                  errors.password ? 'border-red-400' : ''
                 }`}
                 placeholder="Mín. 8 caracteres, mayúscula, número y símbolo"
               />
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                <p className="mt-1 text-sm text-red-300">{errors.password}</p>
               )}
               {!errors.password && formData.password && (
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-blue-200">
                   Debe contener: 8+ caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-white mb-1">
                 Nombre completo *
               </label>
               <input
@@ -417,18 +440,18 @@ export default function RegisterPage() {
                 value={formData.name}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-                  errors.name ? 'border-red-500' : ''
+                className={`w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all ${
+                  errors.name ? 'border-red-400' : ''
                 }`}
                 placeholder="Nombre Apellido"
               />
               {errors.name && (
-                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                <p className="mt-1 text-sm text-red-300">{errors.name}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-white mb-1">
                 Teléfono *
               </label>
               <div className="flex">
@@ -439,15 +462,15 @@ export default function RegisterPage() {
                     aria-label="Seleccionar código de país"
                     aria-expanded={showCountryDropdown}
                     className={`flex items-center gap-2 px-3 py-2 border-r-0 rounded-l-lg border transition-colors ${
-                      errors.phone ? 'border-red-500' : 'border-gray-300'
-                    } bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                      errors.phone ? 'border-red-400' : 'border-white/30'
+                    } bg-white/10 hover:bg-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-400`}
                   >
                     <span className="text-xl">{COUNTRIES.find(c => c.code === countryCode)?.flag}</span>
                     <span className="text-sm font-medium">{countryCode}</span>
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                    <ChevronDown className="w-4 h-4 text-white/70" />
                   </button>
                   {showCountryDropdown && (
-                    <div className="absolute z-50 mt-1 w-56 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto top-full">
+                    <div className="absolute z-50 mt-1 w-56 bg-blue-900 border border-white/30 rounded-lg shadow-lg max-h-64 overflow-y-auto top-full backdrop-blur-lg">
                       {COUNTRIES.map((country) => (
                         <button
                           key={country.code}
@@ -460,13 +483,13 @@ export default function RegisterPage() {
                               setErrors({ ...errors, phone: undefined });
                             }
                           }}
-                          className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-100 transition-colors ${
-                            countryCode === country.code ? 'bg-indigo-50 font-medium' : ''
+                          className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-white/20 transition-colors text-white ${
+                            countryCode === country.code ? 'bg-blue-700 font-medium' : ''
                           }`}
                         >
                           <span className="text-xl">{country.flag}</span>
                           <span className="flex-1 text-left text-sm">{country.name}</span>
-                          <span className="text-sm text-gray-600">{country.code}</span>
+                          <span className="text-sm text-blue-200">{country.code}</span>
                         </button>
                       ))}
                     </div>
@@ -478,17 +501,17 @@ export default function RegisterPage() {
                   value={formData.phone}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`flex-1 px-4 py-2 border rounded-r-lg focus:ring-2 focus:ring-indigo-500 ${
-                    errors.phone ? 'border-red-500' : 'border-gray-300 border-l-0'
+                  className={`flex-1 px-4 py-2 bg-white/10 border border-white/30 rounded-r-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all ${
+                    errors.phone ? 'border-red-400' : 'border-l-0'
                   }`}
                   placeholder={countryCode === '+51' ? '987654321' : 'Número de teléfono'}
                 />
               </div>
               {errors.phone && (
-                <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                <p className="mt-1 text-sm text-red-300">{errors.phone}</p>
               )}
               {!errors.phone && !formData.phone && (
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-blue-200">
                   {countryCode === '+51' 
                     ? 'Formato: 9 dígitos comenzando con 9 (Ejemplo: 987654321)'
                     : 'Ingrese el número de teléfono sin el código de país'
@@ -498,25 +521,25 @@ export default function RegisterPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-white mb-1">
                 Rol *
               </label>
               <select
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
               >
-                <option value="alumno">Estudiante</option>
-                <option value="worker">Trabajador</option>
-                <option value="admin">Administrador</option>
+                <option value="alumno" className="bg-blue-900 text-white">Estudiante</option>
+                <option value="worker" className="bg-blue-900 text-white">Trabajador</option>
+                <option value="admin" className="bg-blue-900 text-white">Administrador</option>
               </select>
             </div>
 
             {formData.role === 'alumno' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     Código de estudiante *
                   </label>
                   <input
@@ -525,23 +548,23 @@ export default function RegisterPage() {
                     value={formData.studentCode}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-                      errors.studentCode ? 'border-red-500' : ''
+                    className={`w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all ${
+                      errors.studentCode ? 'border-red-400' : ''
                     }`}
                     placeholder="Ejemplo: A123456"
                   />
                   {errors.studentCode && (
-                    <p className="mt-1 text-sm text-red-600">{errors.studentCode}</p>
+                    <p className="mt-1 text-sm text-red-300">{errors.studentCode}</p>
                   )}
                   {!errors.studentCode && !formData.studentCode && (
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-blue-200">
                       6-10 caracteres alfanuméricos
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     Facultad *
                   </label>
                   <select
@@ -549,24 +572,24 @@ export default function RegisterPage() {
                     value={formData.faculty}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-                      errors.faculty ? 'border-red-500' : ''
+                    className={`w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all ${
+                      errors.faculty ? 'border-red-400' : ''
                     }`}
                   >
-                    <option value="">Seleccione una facultad</option>
+                    <option value="" className="bg-blue-900 text-white">Seleccione una facultad</option>
                     {FACULTIES.map((faculty) => (
-                      <option key={faculty.value} value={faculty.value}>
+                      <option key={faculty.value} value={faculty.value} className="bg-blue-900 text-white">
                         {faculty.label}
                       </option>
                     ))}
                   </select>
                   {errors.faculty && (
-                    <p className="mt-1 text-sm text-red-600">{errors.faculty}</p>
+                    <p className="mt-1 text-sm text-red-300">{errors.faculty}</p>
                   )}
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     Carrera *
                   </label>
                   <select
@@ -575,21 +598,21 @@ export default function RegisterPage() {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     disabled={!formData.faculty}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                      errors.career ? 'border-red-500' : ''
+                    className={`w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all disabled:bg-white/5 disabled:cursor-not-allowed disabled:text-blue-300 ${
+                      errors.career ? 'border-red-400' : ''
                     }`}
                   >
-                    <option value="">
+                    <option value="" className="bg-blue-900 text-white">
                       {formData.faculty ? 'Seleccione una carrera' : 'Primero seleccione una facultad'}
                     </option>
                     {availableCareers.map((career) => (
-                      <option key={career.value} value={career.value}>
+                      <option key={career.value} value={career.value} className="bg-blue-900 text-white">
                         {career.label}
                       </option>
                     ))}
                   </select>
                   {errors.career && (
-                    <p className="mt-1 text-sm text-red-600">{errors.career}</p>
+                    <p className="mt-1 text-sm text-red-300">{errors.career}</p>
                   )}
                 </div>
               </>
@@ -598,7 +621,7 @@ export default function RegisterPage() {
             {formData.role === 'worker' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     Especialidad *
                   </label>
                   <input
@@ -607,18 +630,18 @@ export default function RegisterPage() {
                     value={formData.specialty}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-                      errors.specialty ? 'border-red-500' : ''
+                    className={`w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all ${
+                      errors.specialty ? 'border-red-400' : ''
                     }`}
                     placeholder="Ejemplo: Electricista, Plomero, etc."
                   />
                   {errors.specialty && (
-                    <p className="mt-1 text-sm text-red-600">{errors.specialty}</p>
+                    <p className="mt-1 text-sm text-red-300">{errors.specialty}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     Departamento *
                   </label>
                   <input
@@ -627,13 +650,13 @@ export default function RegisterPage() {
                     value={formData.department}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-                      errors.department ? 'border-red-500' : ''
+                    className={`w-full px-4 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all ${
+                      errors.department ? 'border-red-400' : ''
                     }`}
                     placeholder="Ejemplo: Mantenimiento, Seguridad, etc."
                   />
                   {errors.department && (
-                    <p className="mt-1 text-sm text-red-600">{errors.department}</p>
+                    <p className="mt-1 text-sm text-red-300">{errors.department}</p>
                   )}
                 </div>
               </>
@@ -643,22 +666,23 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-semibold disabled:opacity-50"
+            className="w-full bg-white text-blue-900 py-3 rounded-lg hover:bg-blue-50 transition-all transform hover:scale-105 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {loading ? 'Registrando...' : 'Registrarse'}
           </button>
         </form>
 
-        <p className="text-center mt-4 text-gray-600">
-          ¿Ya tienes cuenta?{' '}
-          <button
-            onClick={() => navigate('/login')}
-            className="text-indigo-600 font-semibold hover:underline"
-            disabled={loading}
-          >
-            Inicia sesión
-          </button>
-        </p>
+          <p className="text-center mt-6 text-blue-200">
+            ¿Ya tienes cuenta?{' '}
+            <button
+              onClick={() => navigate('/login')}
+              className="text-white font-semibold hover:text-blue-200 transition-colors underline"
+              disabled={loading}
+            >
+              Inicia sesión
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
