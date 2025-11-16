@@ -114,9 +114,8 @@ export default function IncidentsPage() {
 
   const fetchWorkers = async () => {
     try {
-      const response = await workerService.getWorkers({ sortBy: 'workload', order: 'asc' }) as any;
-      // El backend devuelve { message: "...", data: { workers: [...], count, sortedBy, order } }
-      const workersData = response?.data?.workers || [];
+      const workersData = await workerService.getWorkers({ sortBy: 'workload', order: 'asc' });
+      console.log('👥 Workers recibidos:', workersData);
       setWorkers(Array.isArray(workersData) ? workersData : []);
     } catch (workerErr) {
       console.error('Error al cargar trabajadores:', workerErr);
@@ -741,6 +740,17 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
   const [newStatus, setNewStatus] = useState(incident.status);
   const [selectedWorker, setSelectedWorker] = useState('');
 
+  // *** AGREGAR ESTO PARA DEBUG ***
+  useEffect(() => {
+    console.log('🔍 Modal Debug:', {
+      userRole,
+      hasAssignedTo: !!incident.assignedTo,
+      assignedTo: incident.assignedTo,
+      workersLength: workers.length,
+      shouldShowAssign: userRole === 'admin' && !incident.assignedTo && workers.length > 0
+    });
+  }, [userRole, incident.assignedTo, workers]);
+
   const handleUpdate = () => {
     if (comment.trim()) {
       onUpdate(incident.incidentId, newStatus, comment);
@@ -750,11 +760,11 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
 
   const handleAssign = () => {
     if (selectedWorker) {
+      console.log('✅ Ejecutando asignación:', { incidentId: incident.incidentId, selectedWorker });
       onAssign(incident.incidentId, selectedWorker);
       setSelectedWorker('');
     }
   };
-
   const canUpdate =
     userRole === 'admin' ||
     (userRole === 'worker' &&
