@@ -735,23 +735,12 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
   );
 }
 
-//Ahora si maneja solo cambiar al siguiente estado
+// REEMPLAZA la función IncidentDetailModal completa en IncidentsPage.tsx
+
 function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, userRole, userId }: any) {
   const [comment, setComment] = useState('');
   const [selectedWorker, setSelectedWorker] = useState('');
 
-<<<<<<< HEAD
-  // *** AGREGAR ESTO PARA DEBUG ***
-  useEffect(() => {
-    console.log('🔍 Modal Debug:', {
-      userRole,
-      hasAssignedTo: !!incident.assignedTo,
-      assignedTo: incident.assignedTo,
-      workersLength: workers.length,
-      shouldShowAssign: userRole === 'admin' && !incident.assignedTo && workers.length > 0
-    });
-  }, [userRole, incident.assignedTo, workers]);
-=======
   // Mapa de transiciones de estados permitidas
   const statusTransitions: Record<string, string> = {
     'pending': 'assigned',      // Pendiente → Asignado
@@ -764,7 +753,6 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
   // Obtener el siguiente estado permitido
   const nextStatus = statusTransitions[incident.status] || incident.status;
   const canTransition = nextStatus !== incident.status;
->>>>>>> 936c3c5 (Agregando siguiente estado)
 
   const handleUpdate = () => {
     if (comment.trim() && canTransition) {
@@ -775,11 +763,11 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
 
   const handleAssign = () => {
     if (selectedWorker) {
-      console.log('✅ Ejecutando asignación:', { incidentId: incident.incidentId, selectedWorker });
       onAssign(incident.incidentId, selectedWorker);
       setSelectedWorker('');
     }
   };
+
   const canUpdate =
     userRole === 'admin' ||
     (userRole === 'worker' &&
