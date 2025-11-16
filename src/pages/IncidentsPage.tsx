@@ -6,7 +6,7 @@ import { incidentService } from '../services/incidentService';
 import { workerService } from '../services/workerService';
 import { useNotification } from '../hooks/useNotification';
 import { Incident, CreateIncidentData } from '../types/incident.types';
-import { Worker, WorkersResponse } from '../types/worker.types';
+import { Worker} from '../types/worker.types';
 import { CATEGORIES, PRIORITIES, STATUSES, ROLES } from '../utils/constants';
 
 export default function IncidentsPage() {
