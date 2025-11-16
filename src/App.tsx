@@ -39,6 +39,7 @@ function AppRoutes() {
       <NotificationContainer />
       <Routes>
         <Route path="/" element={<HomeRoute />} />
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         

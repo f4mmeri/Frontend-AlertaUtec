@@ -362,7 +362,7 @@ export default function RegisterPage() {
 
       {/* Back to home button */}
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/landing')}
         className="absolute top-6 left-6 z-10 flex items-center space-x-2 text-white hover:text-blue-200 transition-colors animate-fade-in"
       >
         <ArrowLeft className="w-5 h-5" />
