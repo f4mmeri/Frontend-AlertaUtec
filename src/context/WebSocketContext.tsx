@@ -1,12 +1,11 @@
 // src/context/WebSocketContext.tsx
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { websocketService } from '../services/websocketService';
 import { useAuth } from '../hooks/useAuth';
 
 interface WebSocketContextType {
   isConnected: boolean;
   lastMessage: any;
-  subscribe: (callback: (data: any) => void) => () => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
@@ -15,7 +14,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<any>(null);
-  const [subscribers, setSubscribers] = useState<Set<(data: any) => void>>(new Set());
 
   useEffect(() => {
     // Solo conectar si hay un usuario autenticado
@@ -39,29 +37,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
-  const handleMessage = (data: any) => {
+  const handleMessage = useCallback((data: any) => {
     console.log('📨 WebSocket mensaje recibido:', data);
-    setLastMessage(data);
-    
-    // Notificar a todos los suscriptores
-    subscribers.forEach((callback) => callback(data));
-  };
-
-  const subscribe = (callback: (data: any) => void) => {
-    setSubscribers((prev) => new Set(prev).add(callback));
-    
-    // Retornar función para desuscribirse
-    return () => {
-      setSubscribers((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(callback);
-        return newSet;
-      });
-    };
-  };
+    setLastMessage({ ...data, timestamp: Date.now() }); // Agregamos timestamp para forzar actualización
+  }, []);
 
   return (
-    <WebSocketContext.Provider value={{ isConnected, lastMessage, subscribe }}>
+    <WebSocketContext.Provider value={{ isConnected, lastMessage }}>
       {children}
     </WebSocketContext.Provider>
   );
