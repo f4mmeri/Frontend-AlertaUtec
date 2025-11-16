@@ -3,6 +3,7 @@ import { Search, Plus, MapPin, Clock, X, Bell, LogOut, AlertCircle } from 'lucid
 import { useAuth } from '../hooks/useAuth';
 import { incidentService } from '../services/incidentService';
 import { workerService } from '../services/workerService';
+import { websocketService } from '../services/websocketService';
 import { useNotification } from '../hooks/useNotification';
 import { Incident, CreateIncidentData } from '../types/incident.types';
 import { Worker } from '../types/worker.types';
@@ -23,6 +24,88 @@ export default function IncidentsPage() {
     fetchData();
   }, [filters]);
 
+  // WebSocket para actualizaciones en tiempo real
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Conectar WebSocket
+    websocketService.connect(token, handleWebSocketMessage);
+
+    // Cleanup al desmontar
+    return () => {
+      websocketService.disconnect();
+    };
+  }, []);
+
+  const handleWebSocketMessage = (data: any) => {
+    console.log('WebSocket message received:', data);
+
+    switch (data.type) {
+      case 'INCIDENT_CREATED':
+        addNotification('info', `Nuevo incidente: ${data.incident.title}`);
+        // Agregar el nuevo incidente a la lista
+        setIncidents((prev) => [data.incident, ...prev]);
+        break;
+
+      case 'INCIDENT_UPDATED':
+        addNotification('info', `Incidente actualizado: ${data.incident.title}`);
+        // Actualizar el incidente en la lista
+        setIncidents((prev) =>
+          prev.map((inc) =>
+            inc.incidentId === data.incident.incidentId ? data.incident : inc
+          )
+        );
+        // Si es el incidente que estamos viendo en el modal, actualizarlo
+        if (selectedIncident?.incidentId === data.incident.incidentId) {
+          setSelectedIncident(data.incident);
+        }
+        break;
+
+      case 'INCIDENT_ASSIGNED':
+        addNotification('success', `Incidente asignado: ${data.incident.title}`);
+        // Actualizar el incidente con el trabajador asignado
+        setIncidents((prev) =>
+          prev.map((inc) =>
+            inc.incidentId === data.incident.incidentId ? data.incident : inc
+          )
+        );
+        // Actualizar el modal si está abierto
+        if (selectedIncident?.incidentId === data.incident.incidentId) {
+          setSelectedIncident(data.incident);
+        }
+        // Recargar trabajadores para actualizar su carga de trabajo
+        if (user?.role === 'admin') {
+          fetchWorkers();
+        }
+        break;
+
+      case 'INCIDENT_DELETED':
+        addNotification('info', `Incidente eliminado: ${data.incidentId}`);
+        // Remover el incidente de la lista
+        setIncidents((prev) => prev.filter((inc) => inc.incidentId !== data.incidentId));
+        // Cerrar el modal si estamos viendo ese incidente
+        if (selectedIncident?.incidentId === data.incidentId) {
+          setSelectedIncident(null);
+        }
+        break;
+
+      case 'WORKER_STATUS_CHANGED':
+        if (user?.role === 'admin') {
+          // Actualizar el estado del trabajador
+          setWorkers((prev) =>
+            prev.map((worker) =>
+              worker.userId === data.worker.userId ? data.worker : worker
+            )
+          );
+        }
+        break;
+
+      default:
+        console.log('Unknown WebSocket message type:', data.type);
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -35,21 +118,24 @@ export default function IncidentsPage() {
       const incidentData = await incidentService.getIncidents(incidentFilters);
       setIncidents(incidentData);
 
-      // Cargar trabajadores solo si es admin (sin bloquear la carga de incidentes)
+      // Cargar trabajadores solo si es admin
       if (user?.role === 'admin') {
-        try {
-          const workerData = await workerService.getWorkers({ sortBy: 'workload', order: 'asc' });
-          setWorkers(workerData);
-        } catch (workerErr) {
-          console.error('Error al cargar trabajadores:', workerErr);
-          // No mostrar error al usuario, solo log
-        }
+        await fetchWorkers();
       }
     } catch (err) {
       console.error('Error al cargar datos:', err);
       addNotification('error', 'Error al cargar datos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWorkers = async () => {
+    try {
+      const workerData = await workerService.getWorkers({ sortBy: 'workload', order: 'asc' });
+      setWorkers(workerData);
+    } catch (workerErr) {
+      console.error('Error al cargar trabajadores:', workerErr);
     }
   };
 
@@ -91,7 +177,7 @@ export default function IncidentsPage() {
   );
 
   return (
-    <div className="min-h-screen  from-blue-50 to-indigo-100">
+    <div className="min-h-screen from-blue-50 to-indigo-100">
       {/* Header */}
       <header className="bg-white shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -510,6 +596,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
     </div>
   );
 }
+
 function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, userRole, userId }: any) {
   const [comment, setComment] = useState('');
   const [newStatus, setNewStatus] = useState(incident.status);
