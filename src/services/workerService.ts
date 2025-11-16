@@ -15,6 +15,10 @@ export const workerService = {
     if (params?.order) queryParams.append('order', params.order);
 
     const response = await api.get(`/workers?${queryParams.toString()}`);
-    return response.data.data.workers || [];
-  },
+    console.log('📦 Respuesta completa:', response);
+    console.log('📦 response.data:', response.data);
+    
+    // Tu backend devuelve: { message, data: { workers, count, sortedBy, order } }
+    return response.data?.data?.workers || [];
+  }
 };
