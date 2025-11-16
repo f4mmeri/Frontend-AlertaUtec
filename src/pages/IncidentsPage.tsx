@@ -34,33 +34,40 @@ export default function IncidentsPage() {
   const handleWebSocketMessage = (data: any) => {
     console.log('📨 Mensaje WebSocket en IncidentsPage:', data);
 
-    switch (data.type) {
+    // Manejar ambos formatos: {type: 'NEW_INCIDENT', data: {...}} o {type: 'INCIDENT_CREATED', incident: {...}}
+    const eventType = data.type;
+    const payload = data.data || data.incident || data;
+
+    switch (eventType) {
+      case 'NEW_INCIDENT':
       case 'INCIDENT_CREATED':
-        addNotification('info', `✨ Nuevo incidente: ${data.incident.title}`);
-        setIncidents((prev) => [data.incident, ...prev]);
+        addNotification('info', `✨ Nuevo incidente: ${payload.title}`);
+        setIncidents((prev) => [payload, ...prev]);
         break;
 
       case 'INCIDENT_UPDATED':
-        addNotification('info', `🔄 Incidente actualizado: ${data.incident.title}`);
+      case 'UPDATE_INCIDENT':
+        addNotification('info', `🔄 Incidente actualizado: ${payload.title}`);
         setIncidents((prev) =>
           prev.map((inc) =>
-            inc.incidentId === data.incident.incidentId ? data.incident : inc
+            inc.incidentId === payload.incidentId ? payload : inc
           )
         );
-        if (selectedIncident?.incidentId === data.incident.incidentId) {
-          setSelectedIncident(data.incident);
+        if (selectedIncident?.incidentId === payload.incidentId) {
+          setSelectedIncident(payload);
         }
         break;
 
       case 'INCIDENT_ASSIGNED':
-        addNotification('success', `👷 Incidente asignado: ${data.incident.title}`);
+      case 'ASSIGN_INCIDENT':
+        addNotification('success', `👷 Incidente asignado: ${payload.title}`);
         setIncidents((prev) =>
           prev.map((inc) =>
-            inc.incidentId === data.incident.incidentId ? data.incident : inc
+            inc.incidentId === payload.incidentId ? payload : inc
           )
         );
-        if (selectedIncident?.incidentId === data.incident.incidentId) {
-          setSelectedIncident(data.incident);
+        if (selectedIncident?.incidentId === payload.incidentId) {
+          setSelectedIncident(payload);
         }
         if (user?.role === 'admin') {
           fetchWorkers();
@@ -68,22 +75,29 @@ export default function IncidentsPage() {
         break;
 
       case 'INCIDENT_DELETED':
+      case 'DELETE_INCIDENT':
         addNotification('info', `🗑️ Incidente eliminado`);
-        setIncidents((prev) => prev.filter((inc) => inc.incidentId !== data.incidentId));
-        if (selectedIncident?.incidentId === data.incidentId) {
+        const deletedId = payload.incidentId || data.incidentId;
+        setIncidents((prev) => prev.filter((inc) => inc.incidentId !== deletedId));
+        if (selectedIncident?.incidentId === deletedId) {
           setSelectedIncident(null);
         }
         break;
 
       case 'WORKER_STATUS_CHANGED':
+      case 'UPDATE_WORKER':
         if (user?.role === 'admin') {
+          const worker = payload.worker || payload;
           setWorkers((prev) =>
-            prev.map((worker) =>
-              worker.userId === data.worker.userId ? data.worker : worker
+            prev.map((w) =>
+              w.userId === worker.userId ? worker : w
             )
           );
         }
         break;
+
+      default:
+        console.log('⚠️ Tipo de mensaje WebSocket desconocido:', eventType);
     }
   };
 
@@ -156,7 +170,7 @@ export default function IncidentsPage() {
   );
 
   return (
-    <div className="min-h-screen  from-blue-50 to-indigo-100">
+    <div className="min-h-screen from-blue-50 to-indigo-100">
       {/* Header */}
       <header className="bg-white shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
