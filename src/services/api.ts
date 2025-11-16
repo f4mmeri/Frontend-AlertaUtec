@@ -1,84 +1,42 @@
+import axios, { AxiosInstance } from 'axios';
 import { API_BASE_URL } from '../utils/constants';
 
 class ApiService {
-  async request(endpoint: string, options: RequestInit = {}) {
-    const token = localStorage.getItem('token');
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...options.headers,
-    };
+  private api: AxiosInstance;
 
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
-        headers,
-      });
+  constructor() {
+    this.api = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Error en la solicitud');
+    this.api.interceptors.request.use((config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
-
-      return data;
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
-    }
-  }
-
-  // Auth endpoints
-  async login(email: string, password: string) {
-    return this.request('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
+      return config;
     });
+
+    this.api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
+    );
   }
 
-  async register(userData: any) {
-    return this.request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
-  }
-
-  // Incidents endpoints
-  async listIncidents(params?: any) {
-    const query = params ? `?${new URLSearchParams(params)}` : '';
-    return this.request(`/incidents${query}`);
-  }
-
-  async getIncident(id: string) {
-    return this.request(`/incidents/${id}`);
-  }
-
-  async createIncident(incident: any) {
-    return this.request('/incidents', {
-      method: 'POST',
-      body: JSON.stringify(incident),
-    });
-  }
-
-  async updateIncident(id: string, updates: any) {
-    return this.request(`/incidents/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates),
-    });
-  }
-
-  async assignIncident(id: string, workerId: string) {
-    return this.request(`/incidents/${id}/assign`, {
-      method: 'POST',
-      body: JSON.stringify({ workerId }),
-    });
-  }
-
-  // Workers endpoints
-  async listWorkers(params?: any) {
-    const query = params ? `?${new URLSearchParams(params)}` : '';
-    return this.request(`/workers${query}`);
+  getApi() {
+    return this.api;
   }
 }
 
-export const api = new ApiService();
+export const apiService = new ApiService();
+export const api = apiService.getApi();
