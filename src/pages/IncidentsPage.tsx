@@ -735,11 +735,12 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
   );
 }
 
+//Ahora si maneja solo cambiar al siguiente estado
 function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, userRole, userId }: any) {
   const [comment, setComment] = useState('');
-  const [newStatus, setNewStatus] = useState(incident.status);
   const [selectedWorker, setSelectedWorker] = useState('');
 
+<<<<<<< HEAD
   // *** AGREGAR ESTO PARA DEBUG ***
   useEffect(() => {
     console.log('🔍 Modal Debug:', {
@@ -750,10 +751,24 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
       shouldShowAssign: userRole === 'admin' && !incident.assignedTo && workers.length > 0
     });
   }, [userRole, incident.assignedTo, workers]);
+=======
+  // Mapa de transiciones de estados permitidas
+  const statusTransitions: Record<string, string> = {
+    'pending': 'assigned',      // Pendiente → Asignado
+    'assigned': 'in_progress',  // Asignado → En Progreso
+    'in_progress': 'resolved',  // En Progreso → Resuelto
+    'resolved': 'closed',       // Resuelto → Cerrado
+    'closed': 'closed'          // Cerrado → Cerrado (sin cambios)
+  };
+
+  // Obtener el siguiente estado permitido
+  const nextStatus = statusTransitions[incident.status] || incident.status;
+  const canTransition = nextStatus !== incident.status;
+>>>>>>> 936c3c5 (Agregando siguiente estado)
 
   const handleUpdate = () => {
-    if (comment.trim()) {
-      onUpdate(incident.incidentId, newStatus, comment);
+    if (comment.trim() && canTransition) {
+      onUpdate(incident.incidentId, nextStatus, comment);
       setComment('');
     }
   };
@@ -884,34 +899,61 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
             </div>
           )}
 
-          {canUpdate && (
+          {canUpdate && canTransition && (
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <h4 className="font-semibold text-gray-700 mb-3">Actualizar Incidente</h4>
+              
+              {/* Mostrar flujo de estados */}
+              <div className="mb-4 p-3 bg-white rounded-lg border border-blue-200">
+                <p className="text-xs text-gray-600 mb-2 font-medium">Progresión del estado:</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <StatusBadge status={incident.status} />
+                  <span className="text-gray-400">→</span>
+                  <StatusBadge status={nextStatus} />
+                </div>
+              </div>
+
               <div className="space-y-3">
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  {Object.entries(STATUSES).map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                {/* Campo de solo lectura mostrando el siguiente estado */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cambiar estado a:
+                  </label>
+                  <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium">
+                    {STATUSES[nextStatus as keyof typeof STATUSES]}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Los incidentes solo pueden avanzar al siguiente estado en la secuencia
+                  </p>
+                </div>
+
                 <textarea
-                  placeholder="Agregar comentario sobre la actualización..."
+                  placeholder="Agregar comentario sobre la actualización... (requerido)"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 h-24"
+                  required
                 />
+                
                 <button
                   onClick={handleUpdate}
                   disabled={!comment.trim()}
-                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50"
+                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Actualizar Incidente
+                  Avanzar a: {STATUSES[nextStatus as keyof typeof STATUSES]}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {canUpdate && !canTransition && incident.status === 'closed' && (
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center gap-3 text-gray-600">
+                <AlertCircle className="w-5 h-5" />
+                <div>
+                  <p className="font-medium">Incidente cerrado</p>
+                  <p className="text-sm">Este incidente ha completado su ciclo y no puede ser actualizado.</p>
+                </div>
               </div>
             </div>
           )}
