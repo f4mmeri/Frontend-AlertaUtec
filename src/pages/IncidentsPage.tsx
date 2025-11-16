@@ -25,74 +25,72 @@ export default function IncidentsPage() {
     fetchData();
   }, [filters]);
 
-  // Escuchar cambios en lastMessage del WebSocket
-  useEffect(() => {
-    if (!lastMessage) return;
+  // SOLO REEMPLAZA el useEffect que maneja lastMessage con este:
 
-    console.log('🔔 Procesando mensaje WebSocket:', lastMessage);
-    
-    const eventType = lastMessage.type;
-    const payload = lastMessage.data;
+useEffect(() => {
+  if (!lastMessage) return;
 
-    switch (eventType) {
-      case 'NEW_INCIDENT':
-        console.log('✨ Nuevo incidente detectado:', payload);
-        addNotification('info', `Nuevo incidente: ${payload.title}`);
-        setIncidents((prev) => [payload, ...prev]);
-        break;
+  console.log('🔔 Procesando mensaje WebSocket:', lastMessage);
+  
+  const eventType = lastMessage.type;
+  const payload = lastMessage.data;
 
-      case 'UPDATE_INCIDENT':
-        console.log('🔄 Actualización de incidente:', payload);
-        addNotification('info', `Incidente actualizado: ${payload.title}`);
-        setIncidents((prev) =>
-          prev.map((inc) =>
-            inc.incidentId === payload.incidentId ? payload : inc
-          )
+  switch (eventType) {
+    case 'NEW_INCIDENT':
+      console.log('✨ Nuevo incidente detectado:', payload);
+      // Ya no agregamos notificación aquí (se hace en WebSocketContext)
+      setIncidents((prev) => [payload, ...prev]);
+      break;
+
+    case 'UPDATE_INCIDENT':
+      console.log('🔄 Actualización de incidente:', payload);
+      setIncidents((prev) =>
+        prev.map((inc) =>
+          inc.incidentId === payload.incidentId ? payload : inc
+        )
+      );
+      if (selectedIncident?.incidentId === payload.incidentId) {
+        setSelectedIncident(payload);
+      }
+      break;
+
+    case 'ASSIGN_INCIDENT':
+      console.log('👷 Asignación de incidente:', payload);
+      setIncidents((prev) =>
+        prev.map((inc) =>
+          inc.incidentId === payload.incidentId ? payload : inc
+        )
+      );
+      if (selectedIncident?.incidentId === payload.incidentId) {
+        setSelectedIncident(payload);
+      }
+      if (user?.role === 'admin') {
+        fetchWorkers();
+      }
+      break;
+
+    case 'DELETE_INCIDENT':
+      console.log('🗑️ Eliminación de incidente');
+      const deletedId = payload.incidentId || lastMessage.incidentId;
+      setIncidents((prev) => prev.filter((inc) => inc.incidentId !== deletedId));
+      if (selectedIncident?.incidentId === deletedId) {
+        setSelectedIncident(null);
+      }
+      break;
+
+    case 'UPDATE_WORKER':
+      if (user?.role === 'admin') {
+        console.log('👤 Actualización de trabajador');
+        setWorkers((prev) =>
+          prev.map((w) => (w.userId === payload.userId ? payload : w))
         );
-        if (selectedIncident?.incidentId === payload.incidentId) {
-          setSelectedIncident(payload);
-        }
-        break;
+      }
+      break;
 
-      case 'ASSIGN_INCIDENT':
-        console.log('👷 Asignación de incidente:', payload);
-        addNotification('success', `Incidente asignado: ${payload.title}`);
-        setIncidents((prev) =>
-          prev.map((inc) =>
-            inc.incidentId === payload.incidentId ? payload : inc
-          )
-        );
-        if (selectedIncident?.incidentId === payload.incidentId) {
-          setSelectedIncident(payload);
-        }
-        if (user?.role === 'admin') {
-          fetchWorkers();
-        }
-        break;
-
-      case 'DELETE_INCIDENT':
-        console.log('🗑️ Eliminación de incidente');
-        addNotification('info', 'Incidente eliminado');
-        const deletedId = payload.incidentId || lastMessage.incidentId;
-        setIncidents((prev) => prev.filter((inc) => inc.incidentId !== deletedId));
-        if (selectedIncident?.incidentId === deletedId) {
-          setSelectedIncident(null);
-        }
-        break;
-
-      case 'UPDATE_WORKER':
-        if (user?.role === 'admin') {
-          console.log('👤 Actualización de trabajador');
-          setWorkers((prev) =>
-            prev.map((w) => (w.userId === payload.userId ? payload : w))
-          );
-        }
-        break;
-
-      default:
-        console.log('⚠️ Tipo de mensaje desconocido:', eventType);
-    }
-  }, [lastMessage]);
+    default:
+      console.log('⚠️ Tipo de mensaje desconocido:', eventType);
+  }
+    }, [lastMessage]);
 
   const fetchData = async () => {
     try {
