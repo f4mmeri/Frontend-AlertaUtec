@@ -395,32 +395,187 @@ function StatItem({ label, value, color }: any) {
 }
 
 function WorkersPanel({ workers }: { workers: Worker[] }) {
+  if (!workers || workers.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-4">
+        <h3 className="font-semibold text-gray-800 mb-3">Personal Disponible</h3>
+        <div className="text-center py-8 text-gray-500">
+          <p className="text-sm">No hay trabajadores disponibles</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Ordenar por disponibilidad: available > moderate > busy
+  const sortedWorkers = [...workers].sort((a, b) => {
+    const statusOrder = { available: 0, moderate: 1, busy: 2 };
+    const orderA = statusOrder[a.status as keyof typeof statusOrder] ?? 3;
+    const orderB = statusOrder[b.status as keyof typeof statusOrder] ?? 3;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.workloadPoints - b.workloadPoints;
+  });
+
+  const availableCount = workers.filter(w => w.status === 'available').length;
+  const moderateCount = workers.filter(w => w.status === 'moderate').length;
+  const busyCount = workers.filter(w => w.status === 'busy').length;
+
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
-      <h3 className="font-semibold text-gray-800 mb-3">Personal Disponible</h3>
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {workers.map((worker) => (
-          <div key={worker.userId} className="bg-gray-50 rounded-lg p-3 border">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <p className="font-medium text-gray-800">{worker.name}</p>
-                <p className="text-xs text-gray-600">{worker.specialty}</p>
-              </div>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                worker.status === 'available' ? 'bg-green-100 text-green-800' :
-                worker.status === 'moderate' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {worker.status === 'available' ? 'Disponible' : worker.status === 'moderate' ? 'Moderado' : 'Ocupado'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-xs text-gray-600">
-              <span>{worker.activeIncidents} activos</span>
-              <span>{worker.workloadPoints}/20 pts</span>
-            </div>
-          </div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-gray-800">Personal Disponible</h3>
+        <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full font-medium">
+          {workers.length} total
+        </span>
+      </div>
+
+      {/* Resumen rápido */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="bg-green-50 rounded-lg p-2 text-center">
+          <p className="text-2xl font-bold text-green-700">{availableCount}</p>
+          <p className="text-xs text-green-600">Disponibles</p>
+        </div>
+        <div className="bg-yellow-50 rounded-lg p-2 text-center">
+          <p className="text-2xl font-bold text-yellow-700">{moderateCount}</p>
+          <p className="text-xs text-yellow-600">Moderados</p>
+        </div>
+        <div className="bg-red-50 rounded-lg p-2 text-center">
+          <p className="text-2xl font-bold text-red-700">{busyCount}</p>
+          <p className="text-xs text-red-600">Ocupados</p>
+        </div>
+      </div>
+
+      {/* Lista de trabajadores */}
+      <div className="space-y-2 max-h-[500px] overflow-y-auto">
+        {sortedWorkers.map((worker) => (
+          <WorkerCard key={worker.userId} worker={worker} />
         ))}
       </div>
+    </div>
+  );
+}
+
+function WorkerCard({ worker }: { worker: Worker }) {
+  const statusConfig: any = {
+    available: {
+      label: 'Disponible',
+      color: 'bg-green-100 text-green-800 border-green-200',
+      icon: '✓',
+      bgCard: 'bg-green-50/50'
+    },
+    moderate: {
+      label: 'Moderado',
+      color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      icon: '⚡',
+      bgCard: 'bg-yellow-50/50'
+    },
+    busy: {
+      label: 'Ocupado',
+      color: 'bg-red-100 text-red-800 border-red-200',
+      icon: '⚠',
+      bgCard: 'bg-red-50/50'
+    }
+  };
+
+  const config = statusConfig[worker.status] || statusConfig.available;
+  const maxWorkload = worker.maxWorkloadPoints || 20;
+  const workloadPercentage = Math.min((worker.workloadPoints / maxWorkload) * 100, 100);
+  const rating = worker.stats?.rating || 0;
+  const totalResolved = worker.stats?.totalResolved || 0;
+  const avgResolutionTime = worker.stats?.avgResolutionTimeHours || 0;
+
+  return (
+    <div className={`rounded-lg p-3 border-2 ${config.color.split(' ')[0]}/20 hover:shadow-md transition-all cursor-pointer`}>
+      {/* Header con nombre y estado */}
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-gray-800 text-sm">{worker.name}</p>
+            {rating > 0 && (
+              <span className="text-xs text-yellow-600">
+                ⭐ {rating.toFixed(1)}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-600 mt-0.5">{worker.specialty || 'General'}</p>
+          {worker.email && (
+            <p className="text-xs text-gray-500 truncate">{worker.email}</p>
+          )}
+        </div>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color} flex items-center gap-1`}>
+          <span>{config.icon}</span>
+          <span>{config.label}</span>
+        </span>
+      </div>
+
+      {/* Barra de carga de trabajo */}
+      <div className="mb-2">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-xs text-gray-600 font-medium">Carga de trabajo</span>
+          <span className="text-xs font-semibold text-gray-700">
+            {worker.workloadPoints}/{maxWorkload} pts
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${
+              workloadPercentage < 50 ? 'bg-green-500' :
+              workloadPercentage < 75 ? 'bg-yellow-500' :
+              'bg-red-500'
+            }`}
+            style={{ width: `${workloadPercentage}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Estadísticas */}
+      <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center gap-3">
+          <span className="text-gray-600">
+            <span className="font-semibold text-gray-800">{worker.activeIncidents || 0}</span> activos
+          </span>
+          {totalResolved > 0 && (
+            <span className="text-gray-600">
+              <span className="font-semibold text-green-700">{totalResolved}</span> resueltos
+            </span>
+          )}
+        </div>
+        {avgResolutionTime > 0 && (
+          <span className="text-gray-500 text-xs">
+            ~{avgResolutionTime.toFixed(1)}h
+          </span>
+        )}
+      </div>
+
+      {/* Incidentes actuales (si tiene) */}
+      {worker.currentIncidents && worker.currentIncidents.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-gray-200">
+          <p className="text-xs font-medium text-gray-700 mb-1">Trabajando en:</p>
+          <div className="space-y-1">
+            {worker.currentIncidents.slice(0, 2).map((inc: any) => (
+              <div key={inc.incidentId} className="text-xs bg-white rounded p-1.5 border border-gray-200">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate flex-1 text-gray-700">{inc.title}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                    inc.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                    inc.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                    inc.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-blue-100 text-blue-700'
+                  }`}>
+                    {inc.priority === 'urgent' ? '🔥' : 
+                     inc.priority === 'high' ? '⚡' :
+                     inc.priority === 'medium' ? '📌' : '📋'}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {worker.currentIncidents.length > 2 && (
+              <p className="text-xs text-gray-500 text-center">
+                +{worker.currentIncidents.length - 2} más
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
