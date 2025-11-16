@@ -39,8 +39,11 @@ function App() {
                 }
               />
               
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              {/* Redirección base */}
+                  <Route path="/" element={<Navigate to="/login" replace />} />
+
+              {/* Wildcard → también a login */}
+                  <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </BrowserRouter>
         </WebSocketProvider>
