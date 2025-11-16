@@ -5,6 +5,37 @@ import { authService } from '../services/authService';
 import { useNotification } from '../hooks/useNotification';
 import { UserRole } from '../types/user.types';
 
+const FACULTIES = [
+  { value: 'computacion', label: 'Computación' },
+  { value: 'negocios', label: 'Negocios' },
+  { value: 'ingenieria', label: 'Ingeniería' },
+];
+
+const CAREERS_BY_FACULTY: Record<string, Array<{ value: string; label: string }>> = {
+  computacion: [
+    { value: 'ciberseguridad', label: 'Ciberseguridad' },
+    { value: 'ciencia-de-datos', label: 'Ciencia de Datos' },
+    { value: 'ciencia-de-la-computacion', label: 'Ciencia de la Computación' },
+    { value: 'sistemas-de-informacion', label: 'Sistemas de Información' },
+  ],
+  negocios: [
+    { value: 'administracion-negocios-digitales', label: 'Administración & Negocios Digitales' },
+    { value: 'administracion-negocios-sostenibles', label: 'Administración & Negocios Sostenibles' },
+    { value: 'business-analytics', label: 'Business Analytics' },
+  ],
+  ingenieria: [
+    { value: 'bioingenieria', label: 'Bioingeniería' },
+    { value: 'ingenieria-ambiental', label: 'Ingeniería Ambiental' },
+    { value: 'ingenieria-civil', label: 'Ingeniería Civil' },
+    { value: 'ingenieria-electronica', label: 'Ingeniería Electrónica' },
+    { value: 'ingenieria-industrial', label: 'Ingeniería Industrial' },
+    { value: 'ingenieria-mecanica', label: 'Ingeniería Mecánica' },
+    { value: 'ingenieria-mecatronica', label: 'Ingeniería Mecatrónica' },
+    { value: 'ingenieria-quimica', label: 'Ingeniería Química' },
+    { value: 'ingenieria-de-la-energia', label: 'Ingeniería de la Energía' },
+  ],
+};
+
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     email: '',
@@ -57,8 +88,16 @@ export default function RegisterPage() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'faculty') {
+      // Limpiar la carrera cuando cambia la facultad
+      setFormData({ ...formData, faculty: value, career: '' });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
+
+  const availableCareers = formData.faculty ? CAREERS_BY_FACULTY[formData.faculty] || [] : [];
 
   return (
     <div className="min-h-screen from-indigo-500 to-purple-600 flex items-center justify-center p-4">
@@ -162,26 +201,41 @@ export default function RegisterPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Facultad
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="faculty"
                     value={formData.faculty}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  />
+                  >
+                    <option value="">Seleccione una facultad</option>
+                    {FACULTIES.map((faculty) => (
+                      <option key={faculty.value} value={faculty.value}>
+                        {faculty.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Carrera
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="career"
                     value={formData.career}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  />
+                    disabled={!formData.faculty}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">
+                      {formData.faculty ? 'Seleccione una carrera' : 'Primero seleccione una facultad'}
+                    </option>
+                    {availableCareers.map((career) => (
+                      <option key={career.value} value={career.value}>
+                        {career.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </>
             )}
