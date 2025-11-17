@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Plus, MapPin, Clock, X, Bell, LogOut, AlertCircle, Home } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, Plus, MapPin, Clock, X, LogOut, AlertCircle, Home } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useWebSocket } from '../context/WebSocketContext';
 import { incidentService } from '../services/incidentService';
@@ -16,6 +16,7 @@ import { Upload, X as XIcon } from 'lucide-react'; // Asegúrate de importar Upl
 export default function IncidentsPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { lastMessage } = useWebSocket();
   const { addNotification } = useNotification();
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -25,6 +26,16 @@ export default function IncidentsPage() {
   const [filters, setFilters] = useState({ status: '', priority: '', category: '' });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+
+  // Abrir modal automáticamente si viene el parámetro create=true
+  useEffect(() => {
+    const createParam = searchParams.get('create');
+    if (createParam === 'true') {
+      setShowCreateModal(true);
+      // Limpiar el parámetro de la URL
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     fetchData();
@@ -204,9 +215,6 @@ export default function IncidentsPage() {
             >
               <Home className="w-5 h-5" />
             </button>
-            <button className="relative p-2 text-white hover:text-blue-200 hover:bg-white/10 rounded-lg transition-colors">
-              <Bell className="w-6 h-6" />
-            </button>
             <button
               onClick={logout}
               className="flex items-center gap-2 text-white hover:text-blue-200 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
@@ -329,7 +337,7 @@ export default function IncidentsPage() {
 
 function IncidentCard({ incident, onClick }: any) {
   const statusColors: any = {
-    pending: 'bg-gray-500/30 text-gray-200 border-gray-400/30',
+    pending: 'bg-gray-200 text-gray-700 border-gray-400',
     assigned: 'bg-blue-500/30 text-blue-200 border-blue-400/30',
     in_progress: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30',
     resolved: 'bg-green-500/30 text-green-200 border-green-400/30',
@@ -340,7 +348,7 @@ function IncidentCard({ incident, onClick }: any) {
     low: 'bg-blue-500/30 text-blue-200 border-blue-400/30',
     medium: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30',
     high: 'bg-orange-500/30 text-orange-200 border-orange-400/30',
-    urgent: 'bg-red-500/30 text-red-200 border-red-400/30',
+    urgent: 'bg-red-200 text-red-700 border-red-400',
   };
 
   return (
@@ -582,7 +590,7 @@ function WorkerCard({ worker }: { worker: Worker }) {
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate flex-1 text-blue-200">{inc.title}</span>
                   <span className={`px-1.5 py-0.5 rounded text-xs font-medium border ${
-                    inc.priority === 'urgent' ? 'bg-red-500/30 text-red-200 border-red-400/30' :
+                    inc.priority === 'urgent' ? 'bg-red-200 text-red-700 border-red-400' :
                     inc.priority === 'high' ? 'bg-orange-500/30 text-orange-200 border-orange-400/30' :
                     inc.priority === 'medium' ? 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30' :
                     'bg-blue-500/30 text-blue-200 border-blue-400/30'
@@ -606,71 +614,202 @@ function WorkerCard({ worker }: { worker: Worker }) {
   );
 }
 
+
 function CreateIncidentModal({ onClose, onCreate }: any) {
   const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const { addNotification } = useNotification();
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: 'mantenimiento-general',
     priority: 'medium' as any,
-    location: { building: '', floor: 1, room: '', specificLocation: '' },
+    location: { 
+      building: '', 
+      buildingOther: '', // Para cuando seleccionan "Otro"
+      floor: 1, // Valor por defecto: Piso 1 (no hay piso 0)
+      roomType: '', // L, M, A, E o 'corridor'
+      roomNumber: '', // Números del salón (máx 4 dígitos)
+      isCorridor: false, // Si es pabellón/corredor
+      room: '', // Para otros edificios (Auditorio, Aula Magna, etc.)
+      specificLocation: '' 
+    },
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Verificar que no exceda el límite de 5 imágenes
+    if (imageFiles.length + files.length > 5) {
+      alert(`Puedes subir máximo 5 imágenes. Ya tienes ${imageFiles.length} imagen(es) seleccionada(s).`);
+      e.target.value = '';
+      return;
+    }
+
+    const validFiles: File[] = [];
+    const fileArray = Array.from(files);
+
+    // Validar todos los archivos primero
+    for (const file of fileArray) {
       // Validar tipo de archivo
       if (!file.type.startsWith('image/')) {
-        alert('Por favor selecciona un archivo de imagen válido');
-        return;
+        alert(`${file.name} no es un archivo de imagen válido`);
+        continue;
       }
 
       // Validar tamaño (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('La imagen no debe superar los 5MB');
-        return;
+        alert(`${file.name} no debe superar los 5MB`);
+        continue;
       }
 
-      setImageFile(file);
-
-      // Crear preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      validFiles.push(file);
     }
+
+    if (validFiles.length === 0) {
+      e.target.value = '';
+      return;
+    }
+
+    // Crear previews para todos los archivos válidos
+    const previewPromises = validFiles.map((file) => {
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.onerror = () => {
+          reject(new Error(`Error leyendo ${file.name}`));
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(previewPromises)
+      .then((previews) => {
+        setImageFiles([...imageFiles, ...validFiles]);
+        setImagePreviews([...imagePreviews, ...previews]);
+      })
+      .catch((error) => {
+        console.error('Error procesando imágenes:', error);
+        addNotification('error', 'Error al procesar algunas imágenes');
+      });
+
+    // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
+    e.target.value = '';
   };
 
-  const handleRemoveImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const handleRemoveImage = (index: number) => {
+    const newFiles = imageFiles.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    setImageFiles(newFiles);
+    setImagePreviews(newPreviews);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validación personalizada
+    if (formData.location.building === 'otro' && !formData.location.buildingOther.trim()) {
+      alert('Por favor especifique el edificio/pabellón');
+      return;
+    }
+
+    const isMainBuilding = formData.location.building === 'edificio-principal' || formData.location.building === 'nuevo-edificio';
+    if (isMainBuilding && !formData.location.isCorridor) {
+      if (!formData.location.roomType || !formData.location.roomNumber) {
+        alert('Por favor complete el tipo y número del salón, o marque la opción de Pabellón/Corredor');
+        return;
+      }
+    }
+
+    // Validar que para otros edificios (auditorio, aula magna, otro, etc.) se ingrese el salón/ambiente
+    if (!isMainBuilding && formData.location.building !== '') {
+      if (!formData.location.room || !formData.location.room.trim()) {
+        alert('Por favor ingrese el salón/aula/ambiente');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      // Crear FormData para enviar archivo
-      const submitData: any = { ...formData };
+      // Construir el objeto location según el formato esperado por el backend
+      const isMainBuilding = formData.location.building === 'edificio-principal' || formData.location.building === 'nuevo-edificio';
       
-      if (imageFile) {
-        // Convertir imagen a base64 para enviar al backend
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64Image = reader.result as string;
-          submitData.image = base64Image;
-          submitData.imageName = imageFile.name;
-          submitData.imageType = imageFile.type;
-          
+      // Construir el objeto location
+      const locationData: any = {
+        building: formData.location.building, // Enviar el valor del select (edificio-principal, nuevo-edificio, etc.)
+        floor: formData.location.floor,
+      };
+
+      // Si es "otro", agregar otherBuilding
+      if (formData.location.building === 'otro') {
+        locationData.otherBuilding = formData.location.buildingOther;
+      }
+
+      // Si es edificio principal o nuevo edificio
+      if (isMainBuilding) {
+        if (formData.location.isCorridor) {
+          // Si es pabellón/corredor
+          locationData.roomType = 'pabellon-corredor';
+          locationData.room = formData.location.room || 'Pabellón/Corredor';
+        } else {
+          // Si es un salón, enviar tipo y número
+          locationData.roomType = formData.location.roomType;
+          locationData.roomNumber = formData.location.roomNumber;
+          // También construir room para compatibilidad
+          locationData.room = formData.location.roomType + formData.location.roomNumber;
+        }
+      } else {
+        // Para otros edificios, solo enviar room como texto libre
+        locationData.room = formData.location.room || '';
+      }
+
+      // Agregar ubicación específica si existe
+      if (formData.location.specificLocation) {
+        locationData.specificLocation = formData.location.specificLocation;
+      }
+
+      // Crear objeto de datos con location formateado
+      const submitData: any = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority,
+        location: locationData
+      };
+      
+      if (imageFiles.length > 0) {
+        // Convertir todas las imágenes a base64
+        const imagePromises = imageFiles.map((file) => {
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              resolve(reader.result as string);
+            };
+            reader.onerror = () => {
+              reject(new Error(`Error leyendo ${file.name}`));
+            };
+            reader.readAsDataURL(file);
+          });
+        });
+
+        try {
+          const base64Images = await Promise.all(imagePromises);
+          submitData.images = base64Images;
           await onCreate(submitData);
           setLoading(false);
-        };
-        reader.readAsDataURL(imageFile);
+        } catch (error) {
+          console.error('Error procesando imágenes:', error);
+          addNotification('error', 'Error al procesar las imágenes');
+          setLoading(false);
+        }
       } else {
+        // Sin imágenes, enviar array vacío
+        submitData.images = [];
         await onCreate(submitData);
         setLoading(false);
       }
@@ -681,7 +820,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
           <h2 className="text-2xl font-bold text-gray-800">Nuevo Incidente</h2>
@@ -718,13 +857,40 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
             />
           </div>
 
-          {/* Sección de carga de imagen */}
+          {/* Sección de carga de imágenes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Imagen (opcional)
+              Imágenes (opcional, máximo 5)
             </label>
             
-            {!imagePreview ? (
+            {/* Grid de imágenes existentes */}
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative border-2 border-gray-300 rounded-lg overflow-hidden group">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition shadow-lg opacity-0 group-hover:opacity-100"
+                      title="Eliminar imagen"
+                    >
+                      <XIcon className="w-4 h-4" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-1.5 text-xs truncate">
+                      {imageFiles[index]?.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Botón para agregar más imágenes */}
+            {imagePreviews.length < 5 && (
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition cursor-pointer">
                 <input
                   type="file"
@@ -732,36 +898,26 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                   onChange={handleImageChange}
                   className="hidden"
                   id="image-upload"
+                  multiple
                 />
                 <label htmlFor="image-upload" className="cursor-pointer">
                   <Upload className="w-12 h-12 mx-auto text-gray-400 mb-2" />
                   <p className="text-sm text-gray-600 mb-1">
-                    Click para subir una imagen
+                    {imagePreviews.length === 0 
+                      ? 'Click para subir imágenes' 
+                      : `Agregar más imágenes (${imagePreviews.length}/5)`}
                   </p>
                   <p className="text-xs text-gray-500">
-                    PNG, JPG, JPEG hasta 5MB
+                    PNG, JPG, JPEG hasta 5MB cada una
                   </p>
                 </label>
               </div>
-            ) : (
-              <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-64 object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={handleRemoveImage}
-                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition shadow-lg"
-                  title="Eliminar imagen"
-                >
-                  <XIcon className="w-5 h-5" />
-                </button>
-                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-xs">
-                  {imageFile?.name}
-                </div>
-              </div>
+            )}
+
+            {imagePreviews.length >= 5 && (
+              <p className="text-xs text-gray-500 text-center mt-2">
+                Has alcanzado el límite de 5 imágenes
+              </p>
             )}
           </div>
 
@@ -799,24 +955,66 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
 
           <div className="space-y-3">
             <h3 className="font-semibold text-gray-700">Ubicación</h3>
-            <div className="grid grid-cols-2 gap-4">
+            
+            {/* Edificio/Pabellón */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Edificio/Pabellón *
+              </label>
+              <select
+                value={formData.location.building}
+                onChange={(e) => {
+                  const newBuilding = e.target.value;
+                  setFormData({
+                    ...formData,
+                    location: { 
+                      ...formData.location, 
+                      building: newBuilding,
+                      buildingOther: newBuilding !== 'otro' ? '' : formData.location.buildingOther,
+                      // Resetear campos de salón si cambia el edificio
+                      roomType: '',
+                      roomNumber: '',
+                      isCorridor: false
+                    },
+                  });
+                }}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                required
+              >
+                <option value="">Seleccione un edificio</option>
+                <option value="edificio-principal">Edificio Principal</option>
+                <option value="nuevo-edificio">Nuevo Edificio</option>
+                <option value="auditorio">Auditorio</option>
+                <option value="aula-magna">Aula Magna</option>
+                <option value="cancha-deportiva">Cancha Deportiva</option>
+                <option value="foyer">Foyer</option>
+                <option value="otro">Otro</option>
+              </select>
+              
+              {/* Campo para "Otro" */}
+              {formData.location.building === 'otro' && (
               <input
                 type="text"
-                placeholder="Edificio/Pabellón *"
-                value={formData.location.building}
+                  placeholder="Especifique el edificio/pabellón *"
+                  value={formData.location.buildingOther}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    location: { ...formData.location, building: e.target.value },
+                      location: { ...formData.location, buildingOther: e.target.value },
                   })
                 }
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full mt-2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
                 required
               />
+              )}
+            </div>
 
-              <input
-                type="number"
-                placeholder="Piso *"
+            {/* Piso */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Piso *
+              </label>
+              <select
                 value={formData.location.floor}
                 onChange={(e) =>
                   setFormData({
@@ -824,27 +1022,134 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     location: { ...formData.location, floor: parseInt(e.target.value) },
                   })
                 }
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
                 required
-              />
+              >
+                {/* Pisos negativos: -2, -1 */}
+                {[-2, -1].map((floor) => (
+                  <option key={floor} value={floor}>
+                    {floor === -2 ? 'Sótano 2' : 'Sótano 1'}
+                  </option>
+                ))}
+                {/* Pisos positivos: 1 a 11 (sin piso 0) */}
+                {Array.from({ length: 11 }, (_, i) => i + 1).map((floor) => (
+                  <option key={floor} value={floor}>
+                    Piso {floor}
+                  </option>
+                ))}
+              </select>
+            </div>
 
+            {/* Salón/Aula - Solo para Edificio Principal y Nuevo Edificio */}
+            {(formData.location.building === 'edificio-principal' || formData.location.building === 'nuevo-edificio') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Salón/Aula *
+                </label>
+                
+                {/* Opción de Pabellón/Corredor */}
+                <div className="mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.location.isCorridor}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          location: { 
+                            ...formData.location, 
+                            isCorridor: e.target.checked,
+                            roomType: e.target.checked ? '' : formData.location.roomType,
+                            roomNumber: e.target.checked ? '' : formData.location.roomNumber
+                          },
+                        })
+                      }
+                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className="text-sm text-gray-700">Pabellón/Corredor (no es un salón específico)</span>
+                  </label>
+                </div>
+
+                {!formData.location.isCorridor && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Tipo de Salón */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Tipo</label>
+                      <select
+                        value={formData.location.roomType}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            location: { ...formData.location, roomType: e.target.value },
+                          })
+                        }
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
+                        required
+                      >
+                        <option value="">Seleccione</option>
+                        <option value="L">L (Laboratorio)</option>
+                        <option value="M">M (Salón con computadores)</option>
+                        <option value="A">A (Salón normal)</option>
+                        <option value="E">E (Sala de estudio)</option>
+                      </select>
+                    </div>
+
+                    {/* Número del Salón */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Número (máx 4 dígitos)</label>
               <input
                 type="text"
-                placeholder="Sala/Aula *"
-                value={formData.location.room}
+                        placeholder="Ej: 302"
+                        value={formData.location.roomNumber}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          setFormData({
+                            ...formData,
+                            location: { ...formData.location, roomNumber: value },
+                          });
+                        }}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
+                        maxLength={4}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Salón/Aula para otros edificios (Auditorio, Aula Magna, Otro, etc.) */}
+            {(formData.location.building !== 'edificio-principal' && 
+              formData.location.building !== 'nuevo-edificio' && 
+              formData.location.building !== '') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Salón/Aula/Ambiente *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Sala A, Salón Principal, etc."
+                  value={formData.location.room || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     location: { ...formData.location, room: e.target.value },
                   })
                 }
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
                 required
               />
+              </div>
+            )}
 
+            {/* Ubicación específica (opcional) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Ubicación específica (opcional)
+              </label>
               <input
                 type="text"
-                placeholder="Ubicación específica"
+                placeholder="Ej: Cerca de la entrada, al lado del baño, etc."
                 value={formData.location.specificLocation}
                 onChange={(e) =>
                   setFormData({
@@ -852,7 +1157,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     location: { ...formData.location, specificLocation: e.target.value },
                   })
                 }
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>
@@ -877,9 +1182,6 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
   );
 }
 
-
-
-// REEMPLAZA la función IncidentDetailModal completa en IncidentsPage.tsx
 
 function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, userRole, userId }: any) {
   const [comment, setComment] = useState('');
@@ -921,7 +1223,7 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
         : incident.assignedTo.userId === userId));
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-800">Detalle del Incidente</h2>
@@ -1136,7 +1438,7 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
 
 function StatusBadge({ status }: { status: string }) {
   const config: any = {
-    pending: { label: 'Pendiente', color: 'bg-gray-500/30 text-gray-200 border-gray-400/30' },
+    pending: { label: 'Pendiente', color: 'bg-gray-200 text-gray-700 border-gray-400' },
     assigned: { label: 'Asignado', color: 'bg-blue-500/30 text-blue-200 border-blue-400/30' },
     in_progress: { label: 'En Progreso', color: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30' },
     resolved: { label: 'Resuelto', color: 'bg-green-500/30 text-green-200 border-green-400/30' },
@@ -1149,9 +1451,9 @@ function StatusBadge({ status }: { status: string }) {
 function PriorityBadge({ priority }: { priority: string }) {
   const config: any = {
     low: { label: 'Baja', color: 'bg-blue-500/30 text-blue-200 border-blue-400/30' },
-    medium: { label: 'Media', color: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30' },
+    medium: { label: 'Media', color: 'bg-yellow-200 text-yellow-800 border-yellow-400' },
     high: { label: 'Alta', color: 'bg-orange-500/30 text-orange-200 border-orange-400/30' },
-    urgent: { label: 'Urgente', color: 'bg-red-500/30 text-red-200 border-red-400/30' },
+    urgent: { label: 'Urgente', color: 'bg-red-200 text-red-700 border-red-400' },
   };
   const p = config[priority] || config.medium;
   return <span className={`px-3 py-1 rounded-full text-xs font-medium border ${p.color}`}>{p.label}</span>;
