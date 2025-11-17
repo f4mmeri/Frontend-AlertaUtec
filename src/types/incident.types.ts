@@ -35,19 +35,28 @@ export interface Incident {
   title: string;
   description: string;
   category: string;
-  priority: IncidentPriority;
-  status: IncidentStatus;
-  location: Location;
-  images?: string[];           // URLs de imágenes en S3
-  imageUrl?: string;           // URL de imagen principal (retrocompatibilidad)
-  reportedBy: string | ReportedBy;
-  assignedTo?: string | AssignedTo;
+  priority: string;
+  status: string;
+  location: {
+    building: string;
+    floor: number;
+    room: string;
+    specificLocation?: string;
+  };
+  reportedBy: {
+    userId: string;
+    name: string;
+    email: string;
+  };
+  assignedTo?: {
+    userId: string;
+    name: string;
+  } | null;
   createdAt: number;
-  updatedAt: number;
-  resolvedAt?: number;
-  comments?: Comment[];
+  imageUrl?: string; // Retrocompatibilidad
+  images?: string[]; // Formato antiguo
+  imageUrls?: string[]; // ✅ Formato actual del backend
 }
-
 export interface CreateIncidentData {
   title: string;
   description: string;

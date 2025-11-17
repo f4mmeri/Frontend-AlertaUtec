@@ -1249,15 +1249,28 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
             <p className="text-gray-600">{incident.description}</p>
           </div>
 
-          {/* Mostrar imagen si existe - soporta ambos formatos */}
-          {(incident.imageUrl || (incident.images && incident.images.length > 0)) && (
+          {/* Mostrar imagen si existe - soporta múltiples formatos */}
+          {(incident.imageUrl || (incident.images && incident.images.length > 0) || (incident.imageUrls && incident.imageUrls.length > 0)) && (
             <div>
               <h4 className="font-semibold text-gray-700 mb-2">
-                {incident.images && incident.images.length > 1 ? 'Imágenes' : 'Imagen'}
+                {((incident.images && incident.images.length > 1) || (incident.imageUrls && incident.imageUrls.length > 1)) ? 'Imágenes' : 'Imagen'}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Si hay array de imágenes */}
-                {incident.images && incident.images.length > 0 ? (
+                {/* Si hay array de imageUrls (formato backend actual) */}
+                {incident.imageUrls && incident.imageUrls.length > 0 ? (
+                  incident.imageUrls.map((imageUrl: string, index: number) => (
+                    <div key={index} className="rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={imageUrl}
+                        alt={`${incident.title} - Imagen ${index + 1}`}
+                        className="w-full h-64 object-cover bg-gray-50 cursor-pointer hover:opacity-90 transition"
+                        onClick={() => window.open(imageUrl, '_blank')}
+                        title="Click para ver en tamaño completo"
+                      />
+                    </div>
+                  ))
+                ) : incident.images && incident.images.length > 0 ? (
+                  /* Si hay array de images (formato antiguo) */
                   incident.images.map((imageUrl: string, index: number) => (
                     <div key={index} className="rounded-lg overflow-hidden border border-gray-200">
                       <img
