@@ -1,5 +1,5 @@
-export const API_BASE_URL = 'https://gvi4wdtw7f.execute-api.us-east-1.amazonaws.com';
-export const WS_URL = 'wss://3hvxj1td1d.execute-api.us-east-1.amazonaws.com/dev';
+export const API_BASE_URL = 'https://s6y0kir9ic.execute-api.us-east-1.amazonaws.com';
+export const WS_URL = 'wss://q3f9jg3009.execute-api.us-east-1.amazonaws.com/dev';
 
 export const CATEGORIES = {
   'mantenimiento-general': 'Mantenimiento General',
