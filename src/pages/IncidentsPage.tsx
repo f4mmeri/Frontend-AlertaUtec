@@ -1376,7 +1376,7 @@ function StatusBadge({ status }: { status: string }) {
 function PriorityBadge({ priority }: { priority: string }) {
   const config: any = {
     low: { label: 'Baja', color: 'bg-blue-500/30 text-blue-200 border-blue-400/30' },
-    medium: { label: 'Media', color: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30' },
+    medium: { label: 'Media', color: 'bg-yellow-200 text-yellow-800 border-yellow-400' },
     high: { label: 'Alta', color: 'bg-orange-500/30 text-orange-200 border-orange-400/30' },
     urgent: { label: 'Urgente', color: 'bg-red-200 text-red-700 border-red-400' },
   };
