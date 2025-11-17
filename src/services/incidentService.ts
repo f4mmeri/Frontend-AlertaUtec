@@ -24,25 +24,21 @@ export const incidentService = {
   },
 
   async createIncident(data: CreateIncidentData & { 
-    image?: string; 
-    imageName?: string; 
-    imageType?: string;
+    images?: string[];  // ✅ Cambiar a plural y array
   }): Promise<Incident> {
-    // Si hay imagen, enviarla en el payload
     const payload: any = {
       title: data.title,
       description: data.description,
       category: data.category,
       priority: data.priority,
-      location: data.location
+      location: data.location,
+      images: data.images || []  // ✅ Siempre enviar array
     };
 
-    // Agregar imagen si existe
-    if (data.image) {
-      payload.image = data.image;
-      payload.imageName = data.imageName;
-      payload.imageType = data.imageType;
-    }
+    console.log('📤 Service enviando:', {
+      ...payload,
+      images: `[${payload.images.length} imagen(es)]`
+    });
 
     const response = await api.post('/incidents', payload);
     return response.data.data;
