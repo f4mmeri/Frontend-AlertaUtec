@@ -7,7 +7,7 @@ import { Clock, CheckCircle, AlertCircle, Zap, Bell, LogOut, Plus, Home } from '
 import { useAuth } from '../hooks/useAuth';
 import { incidentService } from '../services/incidentService';
 import { Incident } from '../types/incident.types';
-import { ROLES } from '../utils/constants';
+import { ROLES, PRIORITIES, STATUSES } from '../utils/constants';
 import UTECLogo from '../components/UTECLogo';
 
 export default function DashboardPage() {
@@ -222,10 +222,10 @@ function IncidentRow({ incident, onClick }: any) {
       </div>
       <div className="flex gap-2">
         <span className={`px-3 py-1 rounded-full text-xs font-medium border ${priorityColors[incident.priority]}`}>
-          {incident.priority}
+          {PRIORITIES[incident.priority as keyof typeof PRIORITIES]}
         </span>
         <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[incident.status]}`}>
-          {incident.status}
+          {STATUSES[incident.status as keyof typeof STATUSES]}
         </span>
       </div>
     </div>
