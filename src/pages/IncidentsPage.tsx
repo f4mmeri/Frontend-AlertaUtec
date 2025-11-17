@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Plus, MapPin, Clock, X, Bell, LogOut, AlertCircle, Home } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useWebSocket } from '../context/WebSocketContext';
@@ -16,6 +16,7 @@ import { Upload, X as XIcon } from 'lucide-react'; // Asegúrate de importar Upl
 export default function IncidentsPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { lastMessage } = useWebSocket();
   const { addNotification } = useNotification();
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -25,6 +26,16 @@ export default function IncidentsPage() {
   const [filters, setFilters] = useState({ status: '', priority: '', category: '' });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+
+  // Abrir modal automáticamente si viene el parámetro create=true
+  useEffect(() => {
+    const createParam = searchParams.get('create');
+    if (createParam === 'true') {
+      setShowCreateModal(true);
+      // Limpiar el parámetro de la URL
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     fetchData();
@@ -608,8 +619,9 @@ function WorkerCard({ worker }: { worker: Worker }) {
 
 function CreateIncidentModal({ onClose, onCreate }: any) {
   const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const { addNotification } = useNotification();
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -628,34 +640,74 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Verificar que no exceda el límite de 5 imágenes
+    if (imageFiles.length + files.length > 5) {
+      alert(`Puedes subir máximo 5 imágenes. Ya tienes ${imageFiles.length} imagen(es) seleccionada(s).`);
+      e.target.value = '';
+      return;
+    }
+
+    const validFiles: File[] = [];
+    const fileArray = Array.from(files);
+
+    // Validar todos los archivos primero
+    for (const file of fileArray) {
       // Validar tipo de archivo
       if (!file.type.startsWith('image/')) {
-        alert('Por favor selecciona un archivo de imagen válido');
-        return;
+        alert(`${file.name} no es un archivo de imagen válido`);
+        continue;
       }
 
       // Validar tamaño (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('La imagen no debe superar los 5MB');
-        return;
+        alert(`${file.name} no debe superar los 5MB`);
+        continue;
       }
 
-      setImageFile(file);
-
-      // Crear preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      validFiles.push(file);
     }
+
+    if (validFiles.length === 0) {
+      e.target.value = '';
+      return;
+    }
+
+    // Crear previews para todos los archivos válidos
+    const previewPromises = validFiles.map((file) => {
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.onerror = () => {
+          reject(new Error(`Error leyendo ${file.name}`));
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(previewPromises)
+      .then((previews) => {
+        setImageFiles([...imageFiles, ...validFiles]);
+        setImagePreviews([...imagePreviews, ...previews]);
+      })
+      .catch((error) => {
+        console.error('Error procesando imágenes:', error);
+        addNotification('error', 'Error al procesar algunas imágenes');
+      });
+
+    // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
+    e.target.value = '';
   };
 
-  const handleRemoveImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const handleRemoveImage = (index: number) => {
+    const newFiles = imageFiles.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    setImageFiles(newFiles);
+    setImagePreviews(newPreviews);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -732,25 +784,33 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
         location: locationData
       };
       
-      if (imageFile) {
-        // Convertir imagen a base64
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64Image = reader.result as string;
-          
-          // El backend espera un array de imágenes en base64
-          submitData.images = [base64Image];
-          
+      if (imageFiles.length > 0) {
+        // Convertir todas las imágenes a base64
+        const imagePromises = imageFiles.map((file) => {
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              resolve(reader.result as string);
+            };
+            reader.onerror = () => {
+              reject(new Error(`Error leyendo ${file.name}`));
+            };
+            reader.readAsDataURL(file);
+          });
+        });
+
+        try {
+          const base64Images = await Promise.all(imagePromises);
+          submitData.images = base64Images;
           await onCreate(submitData);
-    setLoading(false);
-        };
-        reader.onerror = () => {
-          console.error('Error leyendo archivo');
           setLoading(false);
-        };
-        reader.readAsDataURL(imageFile);
+        } catch (error) {
+          console.error('Error procesando imágenes:', error);
+          addNotification('error', 'Error al procesar las imágenes');
+          setLoading(false);
+        }
       } else {
-        // Sin imagen, enviar array vacío
+        // Sin imágenes, enviar array vacío
         submitData.images = [];
         await onCreate(submitData);
         setLoading(false);
@@ -799,13 +859,40 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
             />
           </div>
 
-          {/* Sección de carga de imagen */}
+          {/* Sección de carga de imágenes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Imagen (opcional)
+              Imágenes (opcional, máximo 5)
             </label>
             
-            {!imagePreview ? (
+            {/* Grid de imágenes existentes */}
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative border-2 border-gray-300 rounded-lg overflow-hidden group">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition shadow-lg opacity-0 group-hover:opacity-100"
+                      title="Eliminar imagen"
+                    >
+                      <XIcon className="w-4 h-4" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-1.5 text-xs truncate">
+                      {imageFiles[index]?.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Botón para agregar más imágenes */}
+            {imagePreviews.length < 5 && (
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition cursor-pointer">
                 <input
                   type="file"
@@ -813,36 +900,26 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                   onChange={handleImageChange}
                   className="hidden"
                   id="image-upload"
+                  multiple
                 />
                 <label htmlFor="image-upload" className="cursor-pointer">
                   <Upload className="w-12 h-12 mx-auto text-gray-400 mb-2" />
                   <p className="text-sm text-gray-600 mb-1">
-                    Click para subir una imagen
+                    {imagePreviews.length === 0 
+                      ? 'Click para subir imágenes' 
+                      : `Agregar más imágenes (${imagePreviews.length}/5)`}
                   </p>
                   <p className="text-xs text-gray-500">
-                    PNG, JPG, JPEG hasta 5MB
+                    PNG, JPG, JPEG hasta 5MB cada una
                   </p>
                 </label>
               </div>
-            ) : (
-              <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-64 object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={handleRemoveImage}
-                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition shadow-lg"
-                  title="Eliminar imagen"
-                >
-                  <XIcon className="w-5 h-5" />
-                </button>
-                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-xs">
-                  {imageFile?.name}
-                </div>
-              </div>
+            )}
+
+            {imagePreviews.length >= 5 && (
+              <p className="text-xs text-gray-500 text-center mt-2">
+                Has alcanzado el límite de 5 imágenes
+              </p>
             )}
           </div>
 

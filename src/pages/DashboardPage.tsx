@@ -100,7 +100,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {user?.role === 'alumno' && (
               <button
-                onClick={() => navigate('/incidents')}
+                onClick={() => navigate('/incidents?create=true')}
                 className="flex items-center gap-3 p-4 bg-white/10 hover:bg-white/20 rounded-xl transition-all transform hover:scale-105 border border-white/20"
               >
                 <Plus className="w-6 h-6 text-white" />
