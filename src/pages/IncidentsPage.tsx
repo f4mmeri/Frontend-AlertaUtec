@@ -328,7 +328,7 @@ export default function IncidentsPage() {
 
 function IncidentCard({ incident, onClick }: any) {
   const statusColors: any = {
-    pending: 'bg-gray-500/30 text-gray-200 border-gray-400/30',
+    pending: 'bg-gray-200 text-gray-700 border-gray-400',
     assigned: 'bg-blue-500/30 text-blue-200 border-blue-400/30',
     in_progress: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30',
     resolved: 'bg-green-500/30 text-green-200 border-green-400/30',
@@ -339,7 +339,7 @@ function IncidentCard({ incident, onClick }: any) {
     low: 'bg-blue-500/30 text-blue-200 border-blue-400/30',
     medium: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30',
     high: 'bg-orange-500/30 text-orange-200 border-orange-400/30',
-    urgent: 'bg-red-500/30 text-red-200 border-red-400/30',
+    urgent: 'bg-red-200 text-red-700 border-red-400',
   };
 
   return (
@@ -581,7 +581,7 @@ function WorkerCard({ worker }: { worker: Worker }) {
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate flex-1 text-blue-200">{inc.title}</span>
                   <span className={`px-1.5 py-0.5 rounded text-xs font-medium border ${
-                    inc.priority === 'urgent' ? 'bg-red-500/30 text-red-200 border-red-400/30' :
+                    inc.priority === 'urgent' ? 'bg-red-200 text-red-700 border-red-400' :
                     inc.priority === 'high' ? 'bg-orange-500/30 text-orange-200 border-orange-400/30' :
                     inc.priority === 'medium' ? 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30' :
                     'bg-blue-500/30 text-blue-200 border-blue-400/30'
@@ -622,6 +622,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
       roomType: '', // L, M, A, E o 'corridor'
       roomNumber: '', // Números del salón (máx 4 dígitos)
       isCorridor: false, // Si es pabellón/corredor
+      room: '', // Para otros edificios (Auditorio, Aula Magna, etc.)
       specificLocation: '' 
     },
   });
@@ -741,7 +742,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
           submitData.images = [base64Image];
           
           await onCreate(submitData);
-          setLoading(false);
+    setLoading(false);
         };
         reader.onerror = () => {
           console.error('Error leyendo archivo');
@@ -761,7 +762,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
           <h2 className="text-2xl font-bold text-gray-800">Nuevo Incidente</h2>
@@ -917,19 +918,19 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
               
               {/* Campo para "Otro" */}
               {formData.location.building === 'otro' && (
-                <input
-                  type="text"
+              <input
+                type="text"
                   placeholder="Especifique el edificio/pabellón *"
                   value={formData.location.buildingOther}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
                       location: { ...formData.location, buildingOther: e.target.value },
-                    })
-                  }
+                  })
+                }
                   className="w-full mt-2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  required
-                />
+                required
+              />
               )}
             </div>
 
@@ -1021,8 +1022,8 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     {/* Número del Salón */}
                     <div>
                       <label className="block text-xs text-gray-600 mb-1">Número (máx 4 dígitos)</label>
-                      <input
-                        type="text"
+              <input
+                type="text"
                         placeholder="Ej: 302"
                         value={formData.location.roomNumber}
                         onChange={(e) => {
@@ -1054,15 +1055,15 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                   type="text"
                   placeholder="Ej: Sala A, Salón Principal, etc."
                   value={formData.location.room || ''}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      location: { ...formData.location, room: e.target.value },
-                    })
-                  }
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, room: e.target.value },
+                  })
+                }
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  required
-                />
+                required
+              />
               </div>
             )}
 
@@ -1147,7 +1148,7 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
         : incident.assignedTo.userId === userId));
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-800">Detalle del Incidente</h2>
@@ -1362,7 +1363,7 @@ function IncidentDetailModal({ incident, onClose, onUpdate, onAssign, workers, u
 
 function StatusBadge({ status }: { status: string }) {
   const config: any = {
-    pending: { label: 'Pendiente', color: 'bg-gray-500/30 text-gray-200 border-gray-400/30' },
+    pending: { label: 'Pendiente', color: 'bg-gray-200 text-gray-700 border-gray-400' },
     assigned: { label: 'Asignado', color: 'bg-blue-500/30 text-blue-200 border-blue-400/30' },
     in_progress: { label: 'En Progreso', color: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30' },
     resolved: { label: 'Resuelto', color: 'bg-green-500/30 text-green-200 border-green-400/30' },
@@ -1377,7 +1378,7 @@ function PriorityBadge({ priority }: { priority: string }) {
     low: { label: 'Baja', color: 'bg-blue-500/30 text-blue-200 border-blue-400/30' },
     medium: { label: 'Media', color: 'bg-yellow-500/30 text-yellow-200 border-yellow-400/30' },
     high: { label: 'Alta', color: 'bg-orange-500/30 text-orange-200 border-orange-400/30' },
-    urgent: { label: 'Urgente', color: 'bg-red-500/30 text-red-200 border-red-400/30' },
+    urgent: { label: 'Urgente', color: 'bg-red-200 text-red-700 border-red-400' },
   };
   const p = config[priority] || config.medium;
   return <span className={`px-3 py-1 rounded-full text-xs font-medium border ${p.color}`}>{p.label}</span>;
