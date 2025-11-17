@@ -674,37 +674,53 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
       }
     }
 
+    // Validar que para otros edificios (auditorio, aula magna, otro, etc.) se ingrese el salón/ambiente
+    if (!isMainBuilding && formData.location.building !== '') {
+      if (!formData.location.room || !formData.location.room.trim()) {
+        alert('Por favor ingrese el salón/aula/ambiente');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      // Construir el objeto location según el formato esperado
-      let buildingName = formData.location.building;
-      if (buildingName === 'otro') {
-        buildingName = formData.location.buildingOther;
-      } else {
-        // Convertir el valor del select a nombre legible
-        const buildingNames: Record<string, string> = {
-          'edificio-principal': 'Edificio Principal',
-          'nuevo-edificio': 'Nuevo Edificio',
-          'auditorio': 'Auditorio',
-          'aula-magna': 'Aula Magna',
-          'cancha-deportiva': 'Cancha Deportiva',
-          'foyer': 'Foyer'
-        };
-        buildingName = buildingNames[buildingName] || buildingName;
+      // Construir el objeto location según el formato esperado por el backend
+      const isMainBuilding = formData.location.building === 'edificio-principal' || formData.location.building === 'nuevo-edificio';
+      
+      // Construir el objeto location
+      const locationData: any = {
+        building: formData.location.building, // Enviar el valor del select (edificio-principal, nuevo-edificio, etc.)
+        floor: formData.location.floor,
+      };
+
+      // Si es "otro", agregar otherBuilding
+      if (formData.location.building === 'otro') {
+        locationData.otherBuilding = formData.location.buildingOther;
       }
 
-      // Construir el campo room
-      let roomValue = '';
+      // Si es edificio principal o nuevo edificio
       if (isMainBuilding) {
         if (formData.location.isCorridor) {
-          roomValue = 'Pabellón/Corredor';
+          // Si es pabellón/corredor
+          locationData.roomType = 'pabellon-corredor';
+          locationData.room = formData.location.room || 'Pabellón/Corredor';
         } else {
-          // Formato: Tipo + Número (ej: L302, M101, A205, E401)
-          roomValue = formData.location.roomType + formData.location.roomNumber;
+          // Si es un salón, enviar tipo y número
+          locationData.roomType = formData.location.roomType;
+          locationData.roomNumber = formData.location.roomNumber;
+          // También construir room para compatibilidad
+          locationData.room = formData.location.roomType + formData.location.roomNumber;
         }
+      } else {
+        // Para otros edificios, solo enviar room como texto libre
+        locationData.room = formData.location.room || '';
       }
-      // Para otros edificios (Auditorio, Aula Magna, etc.), el campo room puede quedar vacío
+
+      // Agregar ubicación específica si existe
+      if (formData.location.specificLocation) {
+        locationData.specificLocation = formData.location.specificLocation;
+      }
 
       // Crear objeto de datos con location formateado
       const submitData: any = {
@@ -712,12 +728,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
         description: formData.description,
         category: formData.category,
         priority: formData.priority,
-        location: {
-          building: buildingName,
-          floor: formData.location.floor,
-          room: roomValue,
-          specificLocation: formData.location.specificLocation || undefined
-        }
+        location: locationData
       };
       
       if (imageFile) {
@@ -1028,6 +1039,30 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Salón/Aula para otros edificios (Auditorio, Aula Magna, Otro, etc.) */}
+            {(formData.location.building !== 'edificio-principal' && 
+              formData.location.building !== 'nuevo-edificio' && 
+              formData.location.building !== '') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Salón/Aula/Ambiente *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Sala A, Salón Principal, etc."
+                  value={formData.location.room || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      location: { ...formData.location, room: e.target.value },
+                    })
+                  }
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
               </div>
             )}
 
