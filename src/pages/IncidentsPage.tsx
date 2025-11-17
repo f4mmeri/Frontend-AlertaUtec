@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, MapPin, Clock, X, Bell, LogOut, AlertCircle, Home } from 'lucide-react';
+import { Search, Plus, MapPin, Clock, X, LogOut, AlertCircle, Home } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useWebSocket } from '../context/WebSocketContext';
 import { incidentService } from '../services/incidentService';
@@ -213,9 +213,6 @@ export default function IncidentsPage() {
               title="Ir al dashboard"
             >
               <Home className="w-5 h-5" />
-            </button>
-            <button className="relative p-2 text-white hover:text-blue-200 hover:bg-white/10 rounded-lg transition-colors">
-              <Bell className="w-6 h-6" />
             </button>
             <button
               onClick={logout}
