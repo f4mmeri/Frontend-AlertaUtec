@@ -791,11 +791,6 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
         images: base64Images
       };
 
-      console.log('📤 Enviando incidente:', {
-        ...submitData,
-        images: `[${submitData.images.length} imagen(es)]`
-      });
-
       await onCreate(submitData);
       setLoading(false);
     } catch (error) {
