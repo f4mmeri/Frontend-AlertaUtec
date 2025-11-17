@@ -711,7 +711,7 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validación personalizada
+    // Validaciones...
     if (formData.location.building === 'otro' && !formData.location.buildingOther.trim()) {
       alert('Por favor especifique el edificio/pabellón');
       return;
@@ -720,12 +720,11 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
     const isMainBuilding = formData.location.building === 'edificio-principal' || formData.location.building === 'nuevo-edificio';
     if (isMainBuilding && !formData.location.isCorridor) {
       if (!formData.location.roomType || !formData.location.roomNumber) {
-        alert('Por favor complete el tipo y número del salón, o marque la opción de Pabellón/Corredor');
+        alert('Por favor complete el tipo y número del salón');
         return;
       }
     }
 
-    // Validar que para otros edificios (auditorio, aula magna, otro, etc.) se ingrese el salón/ambiente
     if (!isMainBuilding && formData.location.building !== '') {
       if (!formData.location.room || !formData.location.room.trim()) {
         alert('Por favor ingrese el salón/aula/ambiente');
@@ -736,85 +735,72 @@ function CreateIncidentModal({ onClose, onCreate }: any) {
     setLoading(true);
 
     try {
-      // Construir el objeto location según el formato esperado por el backend
-      const isMainBuilding = formData.location.building === 'edificio-principal' || formData.location.building === 'nuevo-edificio';
-      
-      // Construir el objeto location
+      // Construir location
       const locationData: any = {
-        building: formData.location.building, // Enviar el valor del select (edificio-principal, nuevo-edificio, etc.)
+        building: formData.location.building,
         floor: formData.location.floor,
       };
 
-      // Si es "otro", agregar otherBuilding
       if (formData.location.building === 'otro') {
         locationData.otherBuilding = formData.location.buildingOther;
       }
 
-      // Si es edificio principal o nuevo edificio
       if (isMainBuilding) {
         if (formData.location.isCorridor) {
-          // Si es pabellón/corredor
           locationData.roomType = 'pabellon-corredor';
           locationData.room = formData.location.room || 'Pabellón/Corredor';
         } else {
-          // Si es un salón, enviar tipo y número
           locationData.roomType = formData.location.roomType;
           locationData.roomNumber = formData.location.roomNumber;
-          // También construir room para compatibilidad
           locationData.room = formData.location.roomType + formData.location.roomNumber;
         }
       } else {
-        // Para otros edificios, solo enviar room como texto libre
         locationData.room = formData.location.room || '';
       }
 
-      // Agregar ubicación específica si existe
       if (formData.location.specificLocation) {
         locationData.specificLocation = formData.location.specificLocation;
       }
 
-      // Crear objeto de datos con location formateado
-      const submitData: any = {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        priority: formData.priority,
-        location: locationData
-      };
-      
+      // 🔥 CONVERTIR IMÁGENES A BASE64
+      let base64Images: string[] = [];
       if (imageFiles.length > 0) {
-        // Convertir todas las imágenes a base64
+        console.log(`📸 Convirtiendo ${imageFiles.length} imágenes...`);
+        
         const imagePromises = imageFiles.map((file) => {
           return new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
-            reader.onloadend = () => {
-              resolve(reader.result as string);
-            };
-            reader.onerror = () => {
-              reject(new Error(`Error leyendo ${file.name}`));
-            };
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error(`Error leyendo ${file.name}`));
             reader.readAsDataURL(file);
           });
         });
 
-        try {
-          const base64Images = await Promise.all(imagePromises);
-          submitData.images = base64Images;
-          await onCreate(submitData);
-          setLoading(false);
-        } catch (error) {
-          console.error('Error procesando imágenes:', error);
-          addNotification('error', 'Error al procesar las imágenes');
-          setLoading(false);
-        }
-      } else {
-        // Sin imágenes, enviar array vacío
-        submitData.images = [];
-        await onCreate(submitData);
-        setLoading(false);
+        base64Images = await Promise.all(imagePromises);
+        console.log(`✅ ${base64Images.length} imágenes convertidas`);
+        console.log(`📊 Primera imagen (100 chars): ${base64Images[0]?.substring(0, 100)}...`);
       }
+
+      // 🔥 CREAR OBJETO FINAL
+      const submitData = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority,
+        location: locationData,
+        images: base64Images
+      };
+
+      console.log('📤 Enviando incidente:', {
+        ...submitData,
+        images: `[${submitData.images.length} imagen(es)]`
+      });
+
+      await onCreate(submitData);
+      setLoading(false);
     } catch (error) {
-      console.error('Error al crear incidente:', error);
+      console.error('❌ Error:', error);
+      addNotification('error', 'Error al procesar el incidente');
       setLoading(false);
     }
   };
