@@ -625,12 +625,6 @@ Si deseas contribuir al proyecto:
 
 ---
 
-## 📄 Licencia
-
-Este proyecto es propiedad de la Universidad de Ingeniería y Tecnología (UTEC).
-
----
-
 ## 📞 Contacto y Soporte
 
 Para soporte técnico o preguntas:
